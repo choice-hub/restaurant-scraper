@@ -26,8 +26,9 @@ COLUMNS = [
     'Address',
     'Phone',
     'Website',
-    'Legal ID',
+    'Wolt ID',
     'Cuisine / Kitchen',
+    'Rating',
     'Platform URL',
 ]
 
@@ -69,7 +70,7 @@ def export_to_sheets(restaurants: list[dict], platform: str, location: str) -> s
     sheet.append_row(COLUMNS, value_input_option='USER_ENTERED')
 
     # Format header
-    sheet.format('A1:H1', {
+    sheet.format('A1:I1', {
         'textFormat': {'bold': True},
         'backgroundColor': {'red': 0.2, 'green': 0.6, 'blue': 0.9},
     })
@@ -85,6 +86,7 @@ def export_to_sheets(restaurants: list[dict], platform: str, location: str) -> s
             r.get('website', ''),
             r.get('legal_id', ''),
             r.get('cuisine', ''),
+            r.get('rating', ''),
             r.get('wolt_url', ''),
         ])
 
@@ -92,6 +94,6 @@ def export_to_sheets(restaurants: list[dict], platform: str, location: str) -> s
         sheet.append_rows(rows, value_input_option='USER_ENTERED')
 
     # Auto-resize columns
-    sheet.columns_auto_resize(0, len(COLUMNS) - 1)
+    sheet.columns_auto_resize(0, len(COLUMNS))
 
     return spreadsheet.url
