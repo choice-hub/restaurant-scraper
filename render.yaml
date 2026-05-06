@@ -1,0 +1,33 @@
+services:
+  # Backend API — runs on Render's free tier (always on)
+  - type: web
+    name: restaurant-scraper-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --timeout 300
+    envVars:
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false          # You'll paste this in Render's dashboard
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+
+  # Frontend — served as a static site
+  - type: web
+    name: restaurant-scraper-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

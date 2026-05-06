@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restaurant Scraper</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍽️ Restaurant Scraper</h1>
+      <p class="subtitle">Extract restaurant data from delivery platforms and export to Google Sheets</p>
+    </header>
+
+    <main class="card">
+      <!-- Step 1: Platform -->
+      <section class="step">
+        <h2><span class="step-num">1</span> Choose Platform</h2>
+        <div class="platform-grid">
+          <label class="platform-tile selected" data-platform="wolt">
+            <input type="radio" name="platform" value="wolt" checked hidden />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Wolt_logo.svg/320px-Wolt_logo.svg.png" alt="Wolt" onerror="this.style.display='none'" />
+            <span>Wolt</span>
+          </label>
+          <label class="platform-tile" data-platform="bolt">
+            <input type="radio" name="platform" value="bolt" hidden />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Bolt_Food_logo.svg/320px-Bolt_Food_logo.svg.png" alt="Bolt Food" onerror="this.style.display='none'" />
+            <span>Bolt Food</span>
+          </label>
+          <label class="platform-tile" data-platform="foodora">
+            <input type="radio" name="platform" value="foodora" hidden />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Foodora_logo.svg/320px-Foodora_logo.svg.png" alt="Foodora" onerror="this.style.display='none'" />
+            <span>Foodora</span>
+          </label>
+          <label class="platform-tile" data-platform="glovo">
+            <input type="radio" name="platform" value="glovo" hidden />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Glovo_logo.svg/320px-Glovo_logo.svg.png" alt="Glovo" onerror="this.style.display='none'" />
+            <span>Glovo</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Step 2: Location -->
+      <section class="step">
+        <h2><span class="step-num">2</span> Search Location</h2>
+        <div class="input-group">
+          <span class="input-icon">📍</span>
+          <input type="text" id="location" placeholder="Enter city or country (e.g. Prague, Czech Republic)" autocomplete="off" />
+        </div>
+      </section>
+
+      <!-- Step 3: Cuisine Filter -->
+      <section class="step">
+        <h2><span class="step-num">3</span> Filter by Cuisine <span class="optional">(optional)</span></h2>
+        <div class="cuisine-wrap">
+          <div class="cuisine-chips" id="cuisineChips">
+            <button class="chip active" data-value="">All cuisines</button>
+            <button class="chip" data-value="pizza">Pizza</button>
+            <button class="chip" data-value="burger">Burger</button>
+            <button class="chip" data-value="sushi">Sushi</button>
+            <button class="chip" data-value="asian">Asian</button>
+            <button class="chip" data-value="italian">Italian</button>
+            <button class="chip" data-value="indian">Indian</button>
+            <button class="chip" data-value="mexican">Mexican</button>
+            <button class="chip" data-value="chinese">Chinese</button>
+            <button class="chip" data-value="thai">Thai</button>
+            <button class="chip" data-value="greek">Greek</button>
+            <button class="chip" data-value="vegan">Vegan</button>
+            <button class="chip" data-value="dessert">Dessert</button>
+            <button class="chip" data-value="kebab">Kebab</button>
+            <button class="chip" data-value="healthy">Healthy</button>
+          </div>
+          <input type="text" id="cuisineCustom" placeholder="Or type custom cuisine..." />
+        </div>
+      </section>
+
+      <!-- Step 4: Email -->
+      <section class="step">
+        <h2><span class="step-num">4</span> Your Email</h2>
+        <p class="hint">We'll send you the Google Sheet link when scraping is done.</p>
+        <div class="input-group">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="email" placeholder="your@email.com" />
+        </div>
+      </section>
+
+      <!-- Scrape Button -->
+      <button class="btn-scrape" id="btnScrape">
+        <span class="btn-icon">🚀</span> Start Scraping
+      </button>
+    </main>
+
+    <!-- Progress Panel -->
+    <div class="progress-panel card" id="progressPanel" style="display:none">
+      <div class="progress-header">
+        <div class="spinner"></div>
+        <div>
+          <h3 id="progressTitle">Scraping in progress...</h3>
+          <p class="hint" id="progressHint">This may take several minutes. You can close this tab — we'll email you when it's done.</p>
+        </div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <p class="progress-status" id="progressStatus">Initializing...</p>
+      <div class="progress-stats" id="progressStats" style="display:none">
+        <div class="stat"><span id="statFound">0</span><label>Found</label></div>
+        <div class="stat"><span id="statScraped">0</span><label>Scraped</label></div>
+        <div class="stat"><span id="statFailed">0</span><label>Failed</label></div>
+      </div>
+    </div>
+
+    <!-- Done Panel -->
+    <div class="done-panel card" id="donePanel" style="display:none">
+      <div class="done-icon">✅</div>
+      <h3>Scraping Complete!</h3>
+      <p id="doneMsg">Your Google Sheet is ready.</p>
+      <a class="btn-sheet" id="sheetLink" href="#" target="_blank">📊 Open Google Sheet</a>
+      <p class="hint">A link has also been sent to your email.</p>
+      <button class="btn-new" id="btnNew">Start New Scrape</button>
+    </div>
+
+    <!-- Error Panel -->
+    <div class="error-panel card" id="errorPanel" style="display:none">
+      <div class="done-icon">❌</div>
+      <h3>Something went wrong</h3>
+      <p id="errorMsg">An error occurred during scraping.</p>
+      <button class="btn-new" id="btnRetry">Try Again</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
