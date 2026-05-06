@@ -62,17 +62,27 @@ def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
     return restaurants
 
 
-def get_venue_details(slug: str) -> dict:
-    """Fetch full details for a single venue by slug."""
+def get_venue_details(slug: str, retries: int = 3) -> dict:
+    """Fetch full details for a single venue by slug, with retry on rate limit."""
     url = f'{BASE}/v3/venues/slug/{slug}'
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    if r.status_code == 404:
+    for attempt in range(retries):
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        if r.status_code == 404:
+            return {}
+        if r.status_code == 429:
+            wait = 5 * (attempt + 1)
+            print(f'[Wolt] Rate limited on {slug}, waiting {wait}s...')
+            time.sleep(wait)
+            continue
+        r.raise_for_status()
+        break
+    else:
         return {}
-    r.raise_for_status()
-    data = r.json()
-    venue = data.get('results', [{}])[0] if data.get('results') else data
 
-    # Extract fields
+    data = r.json()
+    results = data.get('results', [])
+    venue = results[0] if results else data
+
     address = venue.get('address', {})
     contact = venue.get('contact', {})
     tags = [t.get('name', '') for t in venue.get('tags', []) if t.get('name')]
@@ -80,13 +90,12 @@ def get_venue_details(slug: str) -> dict:
     return {
         'name': venue.get('name', ''),
         'city': address.get('city', ''),
-        'address': address.get('street_address', ''),
-        'phone': contact.get('phone_number', ''),
+        'address': address.get('street_address', '') or address.get('street', ''),
+        'phone': contact.get('phone_number', '') or contact.get('phone', ''),
         'website': contact.get('website', ''),
-        'legal_id': venue.get('merchant_id', '') or venue.get('legal_id', ''),
+        'legal_id': str(venue.get('merchant_id', '') or venue.get('legal_id', '')),
         'cuisine': ', '.join(tags),
         'wolt_url': f'https://wolt.com/en/venue/{slug}',
-        'slug': slug,
     }
 
 
