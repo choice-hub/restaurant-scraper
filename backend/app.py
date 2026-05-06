@@ -42,7 +42,7 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         restaurants = scraper(location, cuisine, job)
 
         job['message'] = 'Exporting to Google Sheets...'
-        sheet_url = export_to_sheets(restaurants, platform, location)
+        sheet_url = export_to_sheets(restaurants, platform, location, email)
 
         job['message'] = 'Sending email notification...'
         send_completion_email(email, sheet_url, platform, location, len(restaurants))

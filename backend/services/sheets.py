@@ -13,6 +13,7 @@ import json
 from datetime import datetime
 
 import gspread
+from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 
 SCOPES = [
@@ -33,32 +34,61 @@ COLUMNS = [
 ]
 
 
-def get_client() -> gspread.Client:
+def get_credentials() -> Credentials:
     creds_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
     if not creds_json:
-        raise EnvironmentError(
-            'GOOGLE_CREDENTIALS_JSON env var is not set. '
-            'See backend/.env.example for setup instructions.'
-        )
+        raise EnvironmentError('GOOGLE_CREDENTIALS_JSON env var is not set.')
     creds_dict = json.loads(creds_json)
-    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    return gspread.authorize(creds)
+    return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
 
-def export_to_sheets(restaurants: list[dict], platform: str, location: str) -> str:
+def cleanup_service_account_files(drive_service, folder_id: str) -> None:
+    """Delete old sheets in the folder to keep service account quota clear."""
+    try:
+        res = drive_service.files().list(
+            q=f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet'",
+            fields='files(id, name, createdTime)',
+            orderBy='createdTime',
+        ).execute()
+        files = res.get('files', [])
+        # Keep the 3 most recent, delete the rest
+        for f in files[:-3]:
+            drive_service.files().delete(fileId=f['id']).execute()
+            print(f"[Sheets] Deleted old sheet: {f['name']}")
+    except Exception as e:
+        print(f'[Sheets] Cleanup warning: {e}')
+
+
+def export_to_sheets(restaurants: list[dict], platform: str, location: str, user_email: str = '') -> str:
     """
     Creates a new Google Sheet with restaurant data and returns the shareable URL.
+    Transfers ownership to user_email so storage counts against user, not service account.
     """
-    client = get_client()
+    creds = get_credentials()
+    client = gspread.authorize(creds)
+    drive_service = build('drive', 'v3', credentials=creds)
+
+    folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
+
+    # Clean up old sheets to avoid service account quota issues
+    if folder_id:
+        cleanup_service_account_files(drive_service, folder_id)
 
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M')
     title = f'{platform.capitalize()} Restaurants — {location} — {timestamp}'
 
-    folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
     if folder_id:
         spreadsheet = client.create(title, folder_id=folder_id)
     else:
         spreadsheet = client.create(title)
+
+    # Transfer ownership to the requesting user so storage is on their account
+    if user_email and '@' in user_email:
+        try:
+            spreadsheet.share(user_email, perm_type='user', role='owner', notify=False)
+            print(f'[Sheets] Transferred ownership to {user_email}')
+        except Exception as e:
+            print(f'[Sheets] Could not transfer ownership: {e}')
 
     # Make it publicly viewable (anyone with link)
     spreadsheet.share(None, perm_type='anyone', role='reader')
