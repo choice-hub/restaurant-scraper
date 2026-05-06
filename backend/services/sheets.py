@@ -1,5 +1,9 @@
 """
 Google Sheets export service using gspread + service account credentials.
+
+The service account cannot create new Google Sheet files (no Drive storage quota).
+Instead, we write to a pre-existing spreadsheet shared with the service account.
+Each scrape run adds a new worksheet tab. Set GOOGLE_SPREADSHEET_ID env var.
 """
 import os
 import json
@@ -35,55 +39,50 @@ def get_client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
-def cleanup_old_sheets(client: gspread.Client, keep: int = 5) -> None:
-    """Delete old spreadsheets to keep service account Drive tidy."""
-    try:
-        sheets = client.list_spreadsheet_files()
-        if len(sheets) <= keep:
-            return
-        # Sort by createdTime ascending, delete oldest
-        sheets.sort(key=lambda s: s.get('createdTime', ''))
-        for s in sheets[:-keep]:
-            client.del_spreadsheet(s['id'])
-            print(f"[Sheets] Deleted old sheet: {s['name']}")
-    except Exception as e:
-        print(f'[Sheets] Cleanup warning: {e}')
-
-
 def export_to_sheets(restaurants: list[dict], platform: str, location: str, user_email: str = '') -> str:
     """
-    Creates a new Google Sheet in the service account's Drive and returns a shareable URL.
-    The service account has unlimited Drive storage so no quota issues.
+    Adds a new worksheet tab to a pre-existing shared spreadsheet.
+    Set GOOGLE_SPREADSHEET_ID env var to the spreadsheet ID.
+    Returns the URL of the new worksheet tab.
     """
+    spreadsheet_id = os.environ.get('GOOGLE_SPREADSHEET_ID')
+    if not spreadsheet_id:
+        raise EnvironmentError(
+            'GOOGLE_SPREADSHEET_ID env var is not set. '
+            'Create a Google Sheet, share it with the service account as Editor, '
+            'then set GOOGLE_SPREADSHEET_ID to the sheet ID from its URL.'
+        )
+
     client = get_client()
+    spreadsheet = client.open_by_key(spreadsheet_id)
 
-    # Clean up old sheets so we don't accumulate them
-    cleanup_old_sheets(client, keep=5)
-
+    # Create a new worksheet tab for this run
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M')
-    title = f'{platform.capitalize()} Restaurants — {location} — {timestamp}'
+    tab_title = f'{platform.capitalize()} {location} {timestamp}'[:100]
 
-    # Create in service account's root Drive (unlimited quota, no dependency on user storage)
-    spreadsheet = client.create(title)
+    # Remove the tab if it somehow exists already
+    try:
+        existing = spreadsheet.worksheet(tab_title)
+        spreadsheet.del_worksheet(existing)
+    except gspread.exceptions.WorksheetNotFound:
+        pass
 
-    # Make it publicly viewable (anyone with link)
-    spreadsheet.share(None, perm_type='anyone', role='reader')
-
-    # Also share with the user as editor so they can find it in "Shared with me"
-    if user_email and '@' in user_email:
+    # Clean up old tabs — keep at most 20
+    worksheets = spreadsheet.worksheets()
+    if len(worksheets) >= 20:
+        # Delete the oldest tab (first one, assuming tabs are ordered by creation)
         try:
-            spreadsheet.share(user_email, perm_type='user', role='writer', notify=False)
-        except Exception as e:
-            print(f'[Sheets] Could not share with user: {e}')
+            spreadsheet.del_worksheet(worksheets[0])
+        except Exception:
+            pass
 
-    sheet = spreadsheet.sheet1
-    sheet.update_title('Restaurants')
+    sheet = spreadsheet.add_worksheet(title=tab_title, rows=len(restaurants) + 2, cols=len(COLUMNS))
 
     # Header row
     sheet.append_row(COLUMNS, value_input_option='USER_ENTERED')
 
     # Format header
-    sheet.format('A1:I1', {
+    sheet.format(f'A1:{chr(64 + len(COLUMNS))}1', {
         'textFormat': {'bold': True},
         'backgroundColor': {'red': 0.2, 'green': 0.6, 'blue': 0.9},
     })
@@ -109,4 +108,5 @@ def export_to_sheets(restaurants: list[dict], platform: str, location: str, user
     # Auto-resize columns
     sheet.columns_auto_resize(0, len(COLUMNS))
 
-    return spreadsheet.url
+    # Return URL pointing directly to this tab
+    return f'https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit#gid={sheet.id}'
