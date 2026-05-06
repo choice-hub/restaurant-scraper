@@ -37,12 +37,14 @@ def geocode_location(location: str) -> tuple[float, float, str]:
 
 
 def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
-    """Fetch all restaurant listings for the given coordinates."""
+    """Fetch restaurant listings near the given coordinates (max 3 pages)."""
     restaurants = []
+    seen_slugs = set()
     skip = 0
     batch = 100
+    MAX_RESTAURANTS = 300  # sensible cap per city
 
-    while True:
+    for _ in range(3):  # max 3 pages = 300 restaurants
         url = f'{BASE}/v1/pages/restaurants'
         params = {'lat': lat, 'lon': lon, 'limit': batch, 'skip': skip}
         r = requests.get(url, params=params, headers=HEADERS, timeout=20)
@@ -53,13 +55,13 @@ def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
         sections = data.get('sections', [])
         for section in sections:
             for item in section.get('items', []):
-                # Wolt API nests venue data differently across versions
                 venue = item.get('venue', {})
                 if not isinstance(venue, dict):
                     venue = {}
                 slug = venue.get('slug') or item.get('slug', '')
                 name = venue.get('name') or item.get('name', '')
-                if slug:
+                if slug and slug not in seen_slugs:
+                    seen_slugs.add(slug)
                     items.append({'slug': slug, 'name': name})
 
         if not items:
@@ -68,10 +70,10 @@ def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
         restaurants.extend(items)
         skip += batch
         job['total'] = len(restaurants)
-        job['message'] = f'Found {len(restaurants)} restaurants so far...'
+        job['message'] = f'Found {len(restaurants)} restaurants...'
         time.sleep(0.3)
 
-        if len(items) < batch:
+        if len(items) < batch or len(restaurants) >= MAX_RESTAURANTS:
             break
 
     return restaurants
