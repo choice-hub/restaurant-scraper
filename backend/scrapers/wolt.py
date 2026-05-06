@@ -37,46 +37,28 @@ def geocode_location(location: str) -> tuple[float, float, str]:
 
 
 def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
-    """Fetch all restaurant listings near the given coordinates until exhausted."""
+    """Fetch all restaurant listings in one call — Wolt returns everything at once."""
+    url = f'{BASE}/v1/pages/restaurants'
+    r = requests.get(url, params={'lat': lat, 'lon': lon}, headers=HEADERS, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+
     restaurants = []
     seen_slugs = set()
-    skip = 0
-    batch = 100
 
-    while True:
-        url = f'{BASE}/v1/pages/restaurants'
-        params = {'lat': lat, 'lon': lon, 'limit': batch, 'skip': skip}
-        r = requests.get(url, params=params, headers=HEADERS, timeout=20)
-        r.raise_for_status()
-        data = r.json()
+    for section in data.get('sections', []):
+        for item in section.get('items', []):
+            venue = item.get('venue', {})
+            if not isinstance(venue, dict):
+                venue = {}
+            slug = venue.get('slug') or item.get('slug', '')
+            name = venue.get('name') or item.get('name', '')
+            if slug and slug not in seen_slugs:
+                seen_slugs.add(slug)
+                restaurants.append({'slug': slug, 'name': name})
 
-        new_items = []
-        sections = data.get('sections', [])
-        for section in sections:
-            for item in section.get('items', []):
-                venue = item.get('venue', {})
-                if not isinstance(venue, dict):
-                    venue = {}
-                slug = venue.get('slug') or item.get('slug', '')
-                name = venue.get('name') or item.get('name', '')
-                if slug and slug not in seen_slugs:
-                    seen_slugs.add(slug)
-                    new_items.append({'slug': slug, 'name': name})
-
-        # Stop if no new unique restaurants returned
-        if not new_items:
-            break
-
-        restaurants.extend(new_items)
-        skip += batch
-        job['total'] = len(restaurants)
-        job['message'] = f'Found {len(restaurants)} restaurants so far...'
-        time.sleep(0.3)
-
-        # Stop if we got fewer than a full page (end of results)
-        if len(new_items) < batch:
-            break
-
+    job['total'] = len(restaurants)
+    job['message'] = f'Found {len(restaurants)} restaurants. Fetching details...'
     return restaurants
 
 
