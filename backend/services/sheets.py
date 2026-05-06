@@ -1,19 +1,11 @@
 """
 Google Sheets export service using gspread + service account credentials.
-
-Setup:
-  1. Create a Google Cloud project
-  2. Enable Google Sheets API and Google Drive API
-  3. Create a Service Account and download credentials.json
-  4. Set GOOGLE_CREDENTIALS_JSON env var to the contents of credentials.json
-  5. Set GOOGLE_DRIVE_FOLDER_ID (optional) to auto-organize sheets
 """
 import os
 import json
 from datetime import datetime
 
 import gspread
-from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 
 SCOPES = [
@@ -34,64 +26,55 @@ COLUMNS = [
 ]
 
 
-def get_credentials() -> Credentials:
+def get_client() -> gspread.Client:
     creds_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
     if not creds_json:
         raise EnvironmentError('GOOGLE_CREDENTIALS_JSON env var is not set.')
     creds_dict = json.loads(creds_json)
-    return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    return gspread.authorize(creds)
 
 
-def cleanup_service_account_files(drive_service, folder_id: str) -> None:
-    """Delete old sheets in the folder to keep service account quota clear."""
+def cleanup_old_sheets(client: gspread.Client, keep: int = 5) -> None:
+    """Delete old spreadsheets to keep service account Drive tidy."""
     try:
-        res = drive_service.files().list(
-            q=f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet'",
-            fields='files(id, name, createdTime)',
-            orderBy='createdTime',
-        ).execute()
-        files = res.get('files', [])
-        # Keep the 3 most recent, delete the rest
-        for f in files[:-3]:
-            drive_service.files().delete(fileId=f['id']).execute()
-            print(f"[Sheets] Deleted old sheet: {f['name']}")
+        sheets = client.list_spreadsheet_files()
+        if len(sheets) <= keep:
+            return
+        # Sort by createdTime ascending, delete oldest
+        sheets.sort(key=lambda s: s.get('createdTime', ''))
+        for s in sheets[:-keep]:
+            client.del_spreadsheet(s['id'])
+            print(f"[Sheets] Deleted old sheet: {s['name']}")
     except Exception as e:
         print(f'[Sheets] Cleanup warning: {e}')
 
 
 def export_to_sheets(restaurants: list[dict], platform: str, location: str, user_email: str = '') -> str:
     """
-    Creates a new Google Sheet with restaurant data and returns the shareable URL.
-    Transfers ownership to user_email so storage counts against user, not service account.
+    Creates a new Google Sheet in the service account's Drive and returns a shareable URL.
+    The service account has unlimited Drive storage so no quota issues.
     """
-    creds = get_credentials()
-    client = gspread.authorize(creds)
-    drive_service = build('drive', 'v3', credentials=creds)
+    client = get_client()
 
-    folder_id = os.environ.get('GOOGLE_DRIVE_FOLDER_ID')
-
-    # Clean up old sheets to avoid service account quota issues
-    if folder_id:
-        cleanup_service_account_files(drive_service, folder_id)
+    # Clean up old sheets so we don't accumulate them
+    cleanup_old_sheets(client, keep=5)
 
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M')
     title = f'{platform.capitalize()} Restaurants — {location} — {timestamp}'
 
-    if folder_id:
-        spreadsheet = client.create(title, folder_id=folder_id)
-    else:
-        spreadsheet = client.create(title)
-
-    # Transfer ownership to the requesting user so storage is on their account
-    if user_email and '@' in user_email:
-        try:
-            spreadsheet.share(user_email, perm_type='user', role='owner', notify=False)
-            print(f'[Sheets] Transferred ownership to {user_email}')
-        except Exception as e:
-            print(f'[Sheets] Could not transfer ownership: {e}')
+    # Create in service account's root Drive (unlimited quota, no dependency on user storage)
+    spreadsheet = client.create(title)
 
     # Make it publicly viewable (anyone with link)
     spreadsheet.share(None, perm_type='anyone', role='reader')
+
+    # Also share with the user as editor so they can find it in "Shared with me"
+    if user_email and '@' in user_email:
+        try:
+            spreadsheet.share(user_email, perm_type='user', role='writer', notify=False)
+        except Exception as e:
+            print(f'[Sheets] Could not share with user: {e}')
 
     sheet = spreadsheet.sheet1
     sheet.update_title('Restaurants')
