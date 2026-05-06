@@ -44,10 +44,11 @@
       <!-- Step 2: Location -->
       <section class="step">
         <h2><span class="step-num">2</span> Search Location</h2>
-        <div class="input-group">
+        <div class="input-group autocomplete-wrap">
           <span class="input-icon">📍</span>
-          <input type="text" id="location" placeholder="Enter city or country (e.g. Prague, Czech Republic)" autocomplete="off" />
+          <input type="text" id="location" placeholder="Type a city or country in Europe..." autocomplete="off" />
         </div>
+        <ul class="autocomplete-list" id="autocompleteList"></ul>
       </section>
 
       <!-- Step 3: Cuisine Filter -->

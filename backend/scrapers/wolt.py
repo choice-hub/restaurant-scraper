@@ -16,21 +16,28 @@ HEADERS = {
 
 
 def geocode_location(location: str) -> tuple[float, float, str]:
-    """Resolve a city/country string to lat/lon using Wolt's geocode endpoint."""
-    url = f'{BASE}/v1/google/geocode/json'
-    r = requests.get(url, params={'address': location}, headers=HEADERS, timeout=15)
+    """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim."""
+    url = 'https://nominatim.openstreetmap.org/search'
+    r = requests.get(
+        url,
+        params={'q': location, 'format': 'json', 'limit': 1, 'addressdetails': 1},
+        headers={'User-Agent': 'RestaurantScraper/1.0', 'Accept-Language': 'en'},
+        timeout=10
+    )
     r.raise_for_status()
-    data = r.json()
-    results = data.get('results', [])
+    results = r.json()
     if not results:
-        raise ValueError(f'Could not geocode location: {location}')
-    loc = results[0]['geometry']['location']
-    formatted = results[0].get('formatted_address', location)
-    return loc['lat'], loc['lng'], formatted
+        raise ValueError(f'Could not find location: {location}. Try a more specific city name.')
+    res = results[0]
+    addr = res.get('address', {})
+    city = addr.get('city') or addr.get('town') or addr.get('village') or location
+    country = addr.get('country', '')
+    formatted = f"{city}, {country}" if country else city
+    return float(res['lat']), float(res['lon']), formatted
 
 
 def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
-    """Fetch all restaurant listings for the given coordinates (handles pagination)."""
+    """Fetch all restaurant listings for the given coordinates."""
     restaurants = []
     skip = 0
     batch = 100
@@ -42,31 +49,30 @@ def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
         r.raise_for_status()
         data = r.json()
 
-        # Wolt returns sections; find the restaurant list section
-        sections = data.get('sections', [])
         items = []
+        sections = data.get('sections', [])
         for section in sections:
             for item in section.get('items', []):
-                venue = item.get('venue') or item.get('track_id') or {}
-                if isinstance(item.get('venue'), dict):
-                    venue = item['venue']
-                    items.append({
-                        'slug': venue.get('slug', ''),
-                        'name': venue.get('name', ''),
-                    })
+                # Wolt API nests venue data differently across versions
+                venue = item.get('venue', {})
+                if not isinstance(venue, dict):
+                    venue = {}
+                slug = venue.get('slug') or item.get('slug', '')
+                name = venue.get('name') or item.get('name', '')
+                if slug:
+                    items.append({'slug': slug, 'name': name})
 
         if not items:
             break
 
         restaurants.extend(items)
         skip += batch
-
-        if len(items) < batch:
-            break
-
         job['total'] = len(restaurants)
         job['message'] = f'Found {len(restaurants)} restaurants so far...'
         time.sleep(0.3)
+
+        if len(items) < batch:
+            break
 
     return restaurants
 

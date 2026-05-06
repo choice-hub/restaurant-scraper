@@ -1,12 +1,94 @@
 // Backend API base URL — update this after deploying to Render
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000'
-  : 'https://YOUR-RENDER-APP.onrender.com'; // <-- replace after deployment
+  : 'https://restaurant-scraper-api-ah9e.onrender.com';
 
 let currentJobId = null;
 let pollInterval = null;
 
-// Platform tile selection
+// ── Autocomplete ─────────────────────────────────────────────
+const locationInput = document.getElementById('location');
+const acList = document.getElementById('autocompleteList');
+let acTimeout = null;
+let acIndex = -1;
+
+locationInput.addEventListener('input', () => {
+  clearTimeout(acTimeout);
+  const q = locationInput.value.trim();
+  if (q.length < 2) { closeAC(); return; }
+  acTimeout = setTimeout(() => fetchSuggestions(q), 280);
+});
+
+locationInput.addEventListener('keydown', (e) => {
+  const items = acList.querySelectorAll('li');
+  if (e.key === 'ArrowDown') { acIndex = Math.min(acIndex + 1, items.length - 1); highlightAC(items); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { acIndex = Math.max(acIndex - 1, 0); highlightAC(items); e.preventDefault(); }
+  else if (e.key === 'Enter' && acIndex >= 0) { items[acIndex]?.click(); e.preventDefault(); }
+  else if (e.key === 'Escape') closeAC();
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrap') && !e.target.closest('#autocompleteList')) closeAC();
+});
+
+async function fetchSuggestions(q) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&featuretype=city,country&accept-language=en`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+
+    // Filter to Europe only
+    const european = data.filter(r => {
+      const cc = r.address?.country_code?.toUpperCase();
+      return EUROPEAN_CC.has(cc);
+    });
+
+    renderSuggestions(european.slice(0, 7));
+  } catch { closeAC(); }
+}
+
+function renderSuggestions(items) {
+  acList.innerHTML = '';
+  acIndex = -1;
+  if (!items.length) { closeAC(); return; }
+
+  items.forEach(item => {
+    const city = item.address?.city || item.address?.town || item.address?.village || item.address?.county || '';
+    const country = item.address?.country || '';
+    const type = item.type === 'administrative' || item.class === 'boundary' ? 'country' : 'city';
+    const label = city ? `${city}, ${country}` : country;
+
+    const li = document.createElement('li');
+    li.innerHTML = `<span>📍</span><span>${label}</span><span class="ac-type">${type}</span>`;
+    li.addEventListener('click', () => {
+      locationInput.value = label;
+      closeAC();
+    });
+    acList.appendChild(li);
+  });
+
+  acList.classList.add('open');
+}
+
+function highlightAC(items) {
+  items.forEach((li, i) => li.classList.toggle('active', i === acIndex));
+  items[acIndex]?.scrollIntoView({ block: 'nearest' });
+}
+
+function closeAC() {
+  acList.innerHTML = '';
+  acList.classList.remove('open');
+  acIndex = -1;
+}
+
+const EUROPEAN_CC = new Set([
+  'AL','AD','AT','BY','BE','BA','BG','HR','CY','CZ','DK','EE','FI','FR',
+  'DE','GR','HU','IS','IE','IT','XK','LV','LI','LT','LU','MT','MD','MC',
+  'ME','NL','MK','NO','PL','PT','RO','RU','SM','RS','SK','SI','ES','SE',
+  'CH','UA','GB','VA','TR','AZ','AM','GE'
+]);
+
+// ── Platform tile selection ───────────────────────────────────
 document.querySelectorAll('.platform-tile').forEach(tile => {
   tile.addEventListener('click', () => {
     document.querySelectorAll('.platform-tile').forEach(t => t.classList.remove('selected'));

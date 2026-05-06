@@ -162,6 +162,54 @@ header .subtitle {
   color: var(--text);
 }
 
+/* Autocomplete */
+.autocomplete-wrap {
+  position: relative;
+}
+
+.autocomplete-list {
+  list-style: none;
+  background: #fff;
+  border: 2px solid var(--primary);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  position: absolute;
+  width: 100%;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  display: none;
+}
+
+.autocomplete-list.open { display: block; }
+
+.autocomplete-list li {
+  padding: 11px 16px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.autocomplete-list li:last-child { border-bottom: none; }
+.autocomplete-list li:hover, .autocomplete-list li.active {
+  background: #f0f9ff;
+  color: var(--primary);
+}
+
+.autocomplete-list li .ac-type {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
 /* Cuisine chips */
 .cuisine-wrap {
   display: flex;
