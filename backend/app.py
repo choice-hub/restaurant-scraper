@@ -11,7 +11,7 @@ from scrapers.bolt import scrape_bolt
 from scrapers.foodora import scrape_foodora
 from scrapers.glovo import scrape_glovo
 from services.sheets import export_to_sheets
-from services.email_service import send_completion_email
+from services.email_service import send_completion_email, send_error_email
 
 load_dotenv()
 
@@ -53,9 +53,14 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         job['scraped'] = len(restaurants)
 
     except Exception as e:
+        error_msg = str(e)
         job['status'] = 'error'
-        job['message'] = str(e)
-        print(f'[Job {job_id}] Error: {e}')
+        job['message'] = error_msg
+        print(f'[Job {job_id}] Error: {error_msg}')
+        try:
+            send_error_email(email, platform, location, error_msg)
+        except Exception as mail_err:
+            print(f'[Job {job_id}] Failed to send error email: {mail_err}')
 
 
 @app.route('/api/scrape', methods=['POST'])
