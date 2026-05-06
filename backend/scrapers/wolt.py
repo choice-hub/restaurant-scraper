@@ -90,7 +90,7 @@ def get_venue_details(slug: str) -> dict:
     }
 
 
-def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
+def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:  # cuisine kept for API compat
     """Main entry point. Returns list of restaurant dicts."""
     job['message'] = f'Geocoding "{location}"...'
     lat, lon, formatted = geocode_location(location)
@@ -113,12 +113,6 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
         try:
             details = get_venue_details(slug)
             if details:
-                # Apply cuisine filter if set
-                if cuisine and cuisine.lower() not in details.get('cuisine', '').lower():
-                    job['scraped'] = len(results)
-                    job['progress'] = int((i + 1) / len(slugs) * 100)
-                    continue
-
                 results.append(details)
 
         except Exception as e:

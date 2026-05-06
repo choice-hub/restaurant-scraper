@@ -115,9 +115,7 @@ document.getElementById('btnScrape').addEventListener('click', async () => {
   const platform = document.querySelector('input[name=platform]:checked')?.value;
   const location = document.getElementById('location').value.trim();
   const email = document.getElementById('email').value.trim();
-  const activeChip = document.querySelector('.chip.active');
-  const cuisine = document.getElementById('cuisineCustom').value.trim()
-    || (activeChip && activeChip.dataset.value !== '' ? activeChip.dataset.value : '');
+  const cuisine = '';
 
   if (!location) return alert('Please enter a city or country.');
   if (!email || !email.includes('@')) return alert('Please enter a valid email address.');
