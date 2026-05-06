@@ -37,21 +37,20 @@ def geocode_location(location: str) -> tuple[float, float, str]:
 
 
 def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
-    """Fetch restaurant listings near the given coordinates (max 3 pages)."""
+    """Fetch all restaurant listings near the given coordinates until exhausted."""
     restaurants = []
     seen_slugs = set()
     skip = 0
     batch = 100
-    MAX_RESTAURANTS = 300  # sensible cap per city
 
-    for _ in range(3):  # max 3 pages = 300 restaurants
+    while True:
         url = f'{BASE}/v1/pages/restaurants'
         params = {'lat': lat, 'lon': lon, 'limit': batch, 'skip': skip}
         r = requests.get(url, params=params, headers=HEADERS, timeout=20)
         r.raise_for_status()
         data = r.json()
 
-        items = []
+        new_items = []
         sections = data.get('sections', [])
         for section in sections:
             for item in section.get('items', []):
@@ -62,18 +61,20 @@ def get_restaurant_slugs(lat: float, lon: float, job: dict) -> list[dict]:
                 name = venue.get('name') or item.get('name', '')
                 if slug and slug not in seen_slugs:
                     seen_slugs.add(slug)
-                    items.append({'slug': slug, 'name': name})
+                    new_items.append({'slug': slug, 'name': name})
 
-        if not items:
+        # Stop if no new unique restaurants returned
+        if not new_items:
             break
 
-        restaurants.extend(items)
+        restaurants.extend(new_items)
         skip += batch
         job['total'] = len(restaurants)
-        job['message'] = f'Found {len(restaurants)} restaurants...'
+        job['message'] = f'Found {len(restaurants)} restaurants so far...'
         time.sleep(0.3)
 
-        if len(items) < batch or len(restaurants) >= MAX_RESTAURANTS:
+        # Stop if we got fewer than a full page (end of results)
+        if len(new_items) < batch:
             break
 
     return restaurants
