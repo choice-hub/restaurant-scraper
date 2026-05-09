@@ -1,5 +1,43 @@
 # Restaurant Scraper — Project Context
 
+## RULES — Read before every task
+
+### Never say "done" without verifying
+
+Before telling the user a task is complete, you MUST verify the actual result matches the expected outcome. Follow the checklist below based on what was changed.
+
+**Frontend change** (HTML/CSS/JS):
+1. Deploy to Netlify
+2. Fetch the live page and confirm the changed element is present: `curl -s https://restaurant-scraper-tool.netlify.app | grep -i "expected text or element"`
+3. Check browser console would have no JS errors by reading the JS for broken references (missing DOM IDs, undefined variables)
+4. Only then say: "Done and verified on the live site."
+
+**Backend change** (Python/Flask):
+1. Push to GitHub and wait for Render to redeploy (poll `/health` until it responds)
+2. Run an actual API test — start a real scrape job and poll it to `done`
+3. Confirm the specific thing that changed works (e.g. if email was fixed, check the job message says "Email sent"; if a new field was added, confirm it appears in the result)
+4. Only then say: "Done and verified on the live backend."
+
+**Scraper change** (new field, fixed URL, etc.):
+1. Deploy backend
+2. Run a small test scrape (e.g. Brno) and poll to completion
+3. Check the specific field in the job result or email output
+4. Only then say: "Done — field confirmed present in scrape output."
+
+**Email change**:
+1. Deploy backend
+2. Trigger a test scrape to alex@choiceqr.com
+3. Confirm the job message ends with "Email sent" (not "Email failed")
+4. Only then say: "Done — email confirmed sent."
+
+### General rules
+- Never declare a task done based only on the code change — always verify the live result
+- If a deploy is needed, always wait for it to finish before testing
+- If a test fails, fix it before reporting back — don't report the failure as "done"
+- If something cannot be automatically verified (e.g. visual design), say explicitly: "Deployed — please check X manually"
+
+---
+
 ## What this project is
 A web app that scrapes restaurant listings from delivery platforms (Wolt, Bolt, Foodora, Glovo), exports results to Google Sheets, and emails the user a link when done. Runs fully in the cloud.
 
