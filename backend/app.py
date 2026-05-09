@@ -26,6 +26,82 @@ SCRAPERS = {
     'glovo':   scrape_glovo,
 }
 
+# Country → list of cities to scrape (in order of size)
+COUNTRY_CITIES = {
+    'czech republic': [
+        'Prague, Czech Republic',
+        'Brno, Czech Republic',
+        'Ostrava, Czech Republic',
+        'Plzeň, Czech Republic',
+        'Liberec, Czech Republic',
+        'Olomouc, Czech Republic',
+        'České Budějovice, Czech Republic',
+        'Hradec Králové, Czech Republic',
+        'Pardubice, Czech Republic',
+        'Zlín, Czech Republic',
+        'Havířov, Czech Republic',
+        'Kladno, Czech Republic',
+        'Most, Czech Republic',
+        'Opava, Czech Republic',
+        'Frýdek-Místek, Czech Republic',
+    ],
+    'czechia': None,  # alias, resolved below
+}
+COUNTRY_CITIES['czechia'] = COUNTRY_CITIES['czech republic']
+
+# Aliases that map input text → canonical country key
+COUNTRY_ALIASES = {
+    'czech republic': 'czech republic',
+    'czechia': 'czech republic',
+    'česká republika': 'czech republic',
+    'czech': 'czech republic',
+    'cz': 'czech republic',
+}
+
+
+def _detect_country(location: str):
+    """Return list of cities if location is a country we support, else None."""
+    key = location.strip().lower()
+    country = COUNTRY_ALIASES.get(key)
+    if country:
+        return COUNTRY_CITIES[country]
+    # Also match if it starts with the country name (e.g. "Czech Republic, Europe")
+    for alias, canonical in COUNTRY_ALIASES.items():
+        if key.startswith(alias):
+            return COUNTRY_CITIES[canonical]
+    return None
+
+
+def _scrape_cities(scraper, cities, cuisine, job, platform_label):
+    """Scrape a list of cities with one scraper, dedup by name+address, return merged list."""
+    seen = set()
+    all_results = []
+    total_cities = len(cities)
+
+    for idx, city in enumerate(cities, 1):
+        city_name = city.split(',')[0].strip()
+        job['message'] = f'{platform_label}: scraping {city_name} ({idx}/{total_cities})...'
+        job['progress'] = int((idx - 1) / total_cities * 90)
+
+        try:
+            city_job = {'message': '', 'progress': 0, 'scraped': 0, 'total': 0}
+            results = scraper(city, cuisine, city_job)
+
+            added = 0
+            for r in results:
+                key = (r.get('name', '').lower().strip(), r.get('address', '').lower().strip())
+                if key not in seen and key != ('', ''):
+                    seen.add(key)
+                    all_results.append(r)
+                    added += 1
+
+            job['scraped'] = len(all_results)
+            print(f'[{platform_label}] {city_name}: {len(results)} found, {added} new (total {len(all_results)})')
+        except Exception as e:
+            print(f'[{platform_label}] {city_name} failed: {e}')
+
+    return all_results
+
 
 def run_scrape_job(job_id, platform, location, cuisine, email):
     job = jobs[job_id]
@@ -35,14 +111,20 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         platforms_to_run = ['wolt', 'bolt'] if platform == 'both' else [platform]
         results_by_platform = {}
 
+        cities = _detect_country(location)
+
         for plat in platforms_to_run:
             scraper = SCRAPERS.get(plat)
             if not scraper:
                 raise ValueError(f'Unknown platform: {plat}')
 
-            job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
-            restaurants = scraper(location, cuisine, job)
-            results_by_platform[plat] = restaurants
+            if cities:
+                results = _scrape_cities(scraper, cities, cuisine, job, plat.capitalize())
+            else:
+                job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
+                results = scraper(location, cuisine, job)
+
+            results_by_platform[plat] = results
 
         total = sum(len(v) for v in results_by_platform.values())
         job['status'] = 'done'
