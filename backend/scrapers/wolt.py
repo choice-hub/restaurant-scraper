@@ -14,8 +14,19 @@ HEADERS = {
 }
 
 
-def geocode_location(location: str) -> tuple[float, float, str]:
-    """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim."""
+# ISO 3166-1 alpha-2 → Wolt URL country segment
+_COUNTRY_CODE_MAP = {
+    'cz': 'cze', 'sk': 'svk', 'pl': 'pol', 'hu': 'hun', 'ro': 'rou',
+    'hr': 'hrv', 'rs': 'srb', 'bg': 'bgr', 'gr': 'grc', 'il': 'isr',
+    'fi': 'fin', 'se': 'swe', 'no': 'nor', 'dk': 'dnk', 'ee': 'est',
+    'lv': 'lva', 'lt': 'ltu', 'de': 'deu', 'at': 'aut', 'ch': 'che',
+    'jp': 'jpn', 'ge': 'geo', 'az': 'aze', 'kz': 'kaz',
+}
+
+
+def geocode_location(location: str) -> tuple[float, float, str, str, str]:
+    """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim.
+    Returns (lat, lon, formatted, city_slug, country_slug)."""
     url = 'https://nominatim.openstreetmap.org/search'
     r = requests.get(
         url,
@@ -31,14 +42,17 @@ def geocode_location(location: str) -> tuple[float, float, str]:
     addr = res.get('address', {})
     city = addr.get('city') or addr.get('town') or addr.get('village') or location
     country = addr.get('country', '')
+    country_code2 = res.get('address', {}).get('country_code', '').lower()
+    country_slug = _COUNTRY_CODE_MAP.get(country_code2, country_code2)
+    city_slug = city.lower().replace(' ', '-')
     formatted = f"{city}, {country}" if country else city
-    return float(res['lat']), float(res['lon']), formatted
+    return float(res['lat']), float(res['lon']), formatted, city_slug, country_slug
 
 
 def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
     """Main entry point. Extracts all restaurant data from the listing API in one call."""
     job['message'] = f'Geocoding "{location}"...'
-    lat, lon, formatted = geocode_location(location)
+    lat, lon, formatted, city_slug, country_slug = geocode_location(location)
     city_name = formatted.split(',')[0].strip()
 
     job['message'] = f'Fetching restaurant list near {formatted}...'
@@ -79,7 +93,7 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
                 'legal_id': venue.get('id', ''),
                 'cuisine': cuisine_str,
                 'rating': str(rating_score) if rating_score else '',
-                'wolt_url': f'https://wolt.com/en/venue/{slug}',
+                'wolt_url': f'https://wolt.com/en/{country_slug}/{city_slug}/restaurant/{slug}',
             })
 
     job['total'] = len(results)
