@@ -41,13 +41,37 @@ _MERCHANT_RE = re.compile(
 )
 _PHONE_RE = re.compile(r'"phone":"([^"]+)"')
 
+_geocode_cache: dict = {}
+
+# Fallback coords for common cities to survive Nominatim rate limits
+_CITY_FALLBACKS = {
+    'brno': (49.1950602, 16.6068371, 'Brno, Czechia', 'brno', 'cze'),
+    'prague': (50.0874654, 14.4212535, 'Prague, Czechia', 'prague', 'cze'),
+    'praha': (50.0874654, 14.4212535, 'Prague, Czechia', 'prague', 'cze'),
+    'bratislava': (48.1516988, 17.1093063, 'Bratislava, Slovakia', 'bratislava', 'svk'),
+    'warsaw': (52.2319581, 21.0067249, 'Warsaw, Poland', 'warsaw', 'pol'),
+    'budapest': (47.4979937, 19.0403594, 'Budapest, Hungary', 'budapest', 'hun'),
+}
+
 
 def geocode_location(location: str) -> tuple[float, float, str, str, str]:
     """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim.
     Returns (lat, lon, formatted, city_slug, country_slug)."""
     import time
+
+    key = location.lower().strip()
+    if key in _geocode_cache:
+        return _geocode_cache[key]
+
+    # Use built-in fallback if available (avoids Nominatim entirely)
+    first_word = key.split(',')[0].strip()
+    if first_word in _CITY_FALLBACKS:
+        result = _CITY_FALLBACKS[first_word]
+        _geocode_cache[key] = result
+        return result
+
     url = 'https://nominatim.openstreetmap.org/search'
-    for attempt in range(4):
+    for attempt in range(5):
         r = requests.get(
             url,
             params={'q': location, 'format': 'json', 'limit': 1, 'addressdetails': 1},
@@ -55,7 +79,7 @@ def geocode_location(location: str) -> tuple[float, float, str, str, str]:
             timeout=10
         )
         if r.status_code == 429:
-            time.sleep(2 ** attempt)
+            time.sleep(3 ** attempt)
             continue
         r.raise_for_status()
         break
@@ -70,7 +94,9 @@ def geocode_location(location: str) -> tuple[float, float, str, str, str]:
     country_slug = _COUNTRY_CODE_MAP.get(country_code2, country_code2)
     city_slug = city.lower().replace(' ', '-')
     formatted = f"{city}, {country}" if country else city
-    return float(res['lat']), float(res['lon']), formatted, city_slug, country_slug
+    result = (float(res['lat']), float(res['lon']), formatted, city_slug, country_slug)
+    _geocode_cache[key] = result
+    return result
 
 
 def _fetch_venue_detail(wolt_url: str) -> dict:
