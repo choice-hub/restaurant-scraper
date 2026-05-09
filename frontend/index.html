@@ -44,30 +44,24 @@
 
     <!-- Progress Panel -->
     <div class="progress-panel card" id="progressPanel" style="display:none">
-      <div class="progress-header">
-        <div class="spinner"></div>
-        <div>
-          <h3 id="progressTitle">Scraping in progress...</h3>
-          <p class="hint" id="progressHint">This may take several minutes. You can close this tab — we'll email you when it's done.</p>
-        </div>
+      <div class="started-banner">
+        <div class="started-icon">🚀</div>
+        <h3>Scraping started!</h3>
+        <p>Once it's done, you will receive the ready-made Excel file on your email.</p>
+        <p class="started-bye">Have a great day! 😊</p>
       </div>
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="progressBar" style="width:0%"></div>
       </div>
       <p class="progress-status" id="progressStatus">Initializing...</p>
-      <div class="progress-stats" id="progressStats" style="display:none">
-        <div class="stat"><span id="statFound">0</span><label>Found</label></div>
-        <div class="stat"><span id="statScraped">0</span><label>Scraped</label></div>
-        <div class="stat"><span id="statFailed">0</span><label>Failed</label></div>
-      </div>
     </div>
 
     <!-- Done Panel -->
     <div class="done-panel card" id="donePanel" style="display:none">
       <div class="done-icon">✅</div>
-      <h3>Scraping Complete!</h3>
-      <p id="doneMsg">Your Excel file is on its way.</p>
-      <p class="hint">Check your inbox — the Excel file with all restaurant data has been sent to your email.</p>
+      <h3>All done!</h3>
+      <p id="doneMsg">Your Excel file has been sent to your email.</p>
+      <p class="hint">Check your inbox — the file with all restaurant data is waiting for you.</p>
       <button class="btn-new" id="btnNew">Start New Scrape</button>
     </div>
 

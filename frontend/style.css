@@ -281,14 +281,35 @@ header .subtitle {
 /* Progress panel */
 .progress-panel { }
 
-.progress-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
+.started-banner {
+  text-align: center;
+  padding: 12px 0 24px;
 }
 
-.progress-header h3 { font-size: 1.05rem; margin-bottom: 4px; }
+.started-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.started-banner h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.started-banner p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.started-bye {
+  font-size: 1.05rem !important;
+  font-weight: 600;
+  color: var(--primary) !important;
+  margin-top: 12px !important;
+}
 
 .spinner {
   width: 36px;
