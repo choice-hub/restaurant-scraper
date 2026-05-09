@@ -88,14 +88,6 @@ const EUROPEAN_CC = new Set([
   'CH','UA','GB','VA','TR','AZ','AM','GE'
 ]);
 
-// ── Platform tile selection ───────────────────────────────────
-document.querySelectorAll('.platform-tile').forEach(tile => {
-  tile.addEventListener('click', () => {
-    document.querySelectorAll('.platform-tile').forEach(t => t.classList.remove('selected'));
-    tile.classList.add('selected');
-    tile.querySelector('input[type=radio]').checked = true;
-  });
-});
 
 // Cuisine chip selection
 document.querySelectorAll('.chip').forEach(chip => {
@@ -112,7 +104,7 @@ document.getElementById('cuisineCustom').addEventListener('input', () => {
 
 // Start scraping
 document.getElementById('btnScrape').addEventListener('click', async () => {
-  const platform = document.querySelector('input[name=platform]:checked')?.value;
+  const platform = 'wolt';
   const location = document.getElementById('location').value.trim();
   const email = document.getElementById('email').value.trim();
   const cuisine = '';
@@ -164,8 +156,7 @@ function updateProgress(job) {
   if (job.status === 'done') {
     showPanel('done');
     document.getElementById('doneMsg').textContent =
-      `Scraped ${job.scraped} restaurants from ${job.location}. Google Sheet is ready.`;
-    document.getElementById('sheetLink').href = job.sheet_url || '#';
+      `Scraped ${job.scraped} restaurants from ${job.location}. Excel file sent to your email.`;
     return;
   }
 

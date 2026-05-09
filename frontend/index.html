@@ -10,40 +10,15 @@
   <div class="container">
     <header>
       <h1>🍽️ Restaurant Scraper</h1>
-      <p class="subtitle">Extract restaurant data from delivery platforms and export to Google Sheets</p>
+      <p class="subtitle">Extract restaurant data from Wolt and receive an Excel file by email</p>
     </header>
 
     <main class="card">
-      <!-- Step 1: Platform -->
-      <section class="step">
-        <h2><span class="step-num">1</span> Choose Platform</h2>
-        <div class="platform-grid">
-          <label class="platform-tile selected" data-platform="wolt">
-            <input type="radio" name="platform" value="wolt" checked hidden />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Wolt_logo.svg/320px-Wolt_logo.svg.png" alt="Wolt" onerror="this.style.display='none'" />
-            <span>Wolt</span>
-          </label>
-          <label class="platform-tile" data-platform="bolt">
-            <input type="radio" name="platform" value="bolt" hidden />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Bolt_Food_logo.svg/320px-Bolt_Food_logo.svg.png" alt="Bolt Food" onerror="this.style.display='none'" />
-            <span>Bolt Food</span>
-          </label>
-          <label class="platform-tile" data-platform="foodora">
-            <input type="radio" name="platform" value="foodora" hidden />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Foodora_logo.svg/320px-Foodora_logo.svg.png" alt="Foodora" onerror="this.style.display='none'" />
-            <span>Foodora</span>
-          </label>
-          <label class="platform-tile" data-platform="glovo">
-            <input type="radio" name="platform" value="glovo" hidden />
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Glovo_logo.svg/320px-Glovo_logo.svg.png" alt="Glovo" onerror="this.style.display='none'" />
-            <span>Glovo</span>
-          </label>
-        </div>
-      </section>
+      <input type="hidden" name="platform" value="wolt" />
 
-      <!-- Step 2: Location -->
+      <!-- Step 1: Location -->
       <section class="step">
-        <h2><span class="step-num">2</span> Search Location</h2>
+        <h2><span class="step-num">1</span> Search Location</h2>
         <div class="input-group autocomplete-wrap">
           <span class="input-icon">📍</span>
           <input type="text" id="location" placeholder="Type a city or country in Europe..." autocomplete="off" />
@@ -51,10 +26,10 @@
         <ul class="autocomplete-list" id="autocompleteList"></ul>
       </section>
 
-      <!-- Step 3: Email -->
+      <!-- Step 2: Email -->
       <section class="step">
-        <h2><span class="step-num">3</span> Your Email</h2>
-        <p class="hint">We'll send you the Google Sheet link when scraping is done.</p>
+        <h2><span class="step-num">2</span> Your Email</h2>
+        <p class="hint">We'll email you an Excel file with the results when scraping is done.</p>
         <div class="input-group">
           <span class="input-icon">✉️</span>
           <input type="email" id="email" placeholder="your@email.com" />
@@ -91,9 +66,8 @@
     <div class="done-panel card" id="donePanel" style="display:none">
       <div class="done-icon">✅</div>
       <h3>Scraping Complete!</h3>
-      <p id="doneMsg">Your Google Sheet is ready.</p>
-      <a class="btn-sheet" id="sheetLink" href="#" target="_blank">📊 Open Google Sheet</a>
-      <p class="hint">A link has also been sent to your email.</p>
+      <p id="doneMsg">Your Excel file is on its way.</p>
+      <p class="hint">Check your inbox — the Excel file with all restaurant data has been sent to your email.</p>
       <button class="btn-new" id="btnNew">Start New Scrape</button>
     </div>
 

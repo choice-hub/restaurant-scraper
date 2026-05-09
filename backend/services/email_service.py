@@ -1,10 +1,69 @@
+import io
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+
+COLUMNS = [
+    ('Restaurant Name', 'name'),
+    ('Brand Name', 'brand_name'),
+    ('Phone', 'phone'),
+    ('Website', 'website'),
+    ('Address', 'address'),
+    ('City', 'city'),
+    ('Country', 'country'),
+    ('Cuisine / Kitchen', 'cuisine'),
+    ('Rating', 'rating'),
+    ('Merchant / Legal Company', 'merchant_name'),
+    ('Business ID', 'business_id'),
+    ('Legal Street Address', 'legal_street'),
+    ('Legal City', 'legal_city'),
+    ('Legal Post Code', 'legal_post_code'),
+    ('Legal Country', 'legal_country'),
+    ('Platform URL', 'wolt_url'),
+]
 
 
-def _send(to_email: str, subject: str, html: str) -> None:
+def _build_excel(restaurants: list[dict], platform: str, location: str) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'{platform.capitalize()} - {location}'[:31]
+
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill('solid', fgColor='1A73E8')
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=False)
+
+    for col_idx, (header, _) in enumerate(COLUMNS, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+
+    for row_idx, r in enumerate(restaurants, start=2):
+        for col_idx, (_, key) in enumerate(COLUMNS, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=r.get(key, ''))
+
+    # Auto-size columns
+    for col_idx in range(1, len(COLUMNS) + 1):
+        col_letter = get_column_letter(col_idx)
+        max_len = max(
+            len(str(ws.cell(row=r, column=col_idx).value or ''))
+            for r in range(1, min(len(restaurants) + 2, 200))
+        )
+        ws.column_dimensions[col_letter].width = min(max_len + 4, 50)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _send(to_email: str, subject: str, html: str, attachment: bytes = None, filename: str = None) -> None:
     smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
     smtp_port = int(os.environ.get('SMTP_PORT', 587))
     smtp_user = os.environ.get('SMTP_USER')
@@ -14,11 +73,18 @@ def _send(to_email: str, subject: str, html: str) -> None:
         print('[Email] SMTP credentials not set — skipping.')
         return
 
-    msg = MIMEMultipart('alternative')
+    msg = MIMEMultipart('mixed')
     msg['Subject'] = subject
     msg['From'] = smtp_user
     msg['To'] = to_email
     msg.attach(MIMEText(html, 'html'))
+
+    if attachment and filename:
+        part = MIMEBase('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        part.set_payload(attachment)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+        msg.attach(part)
 
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
@@ -28,12 +94,15 @@ def _send(to_email: str, subject: str, html: str) -> None:
     print(f'[Email] Sent to {to_email}: {subject}')
 
 
-def send_completion_email(to_email, sheet_url, platform, location, count):
+def send_completion_email(to_email, restaurants, platform, location, count):
+    excel_bytes = _build_excel(restaurants, platform, location)
+    filename = f'wolt_{location.replace(", ", "_").replace(" ", "_")}.xlsx'
+
     subject = f'✅ Scraping done — {count} restaurants from {location} ({platform.capitalize()})'
     html = f"""
     <html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
       <h2 style="color:#009de0;">🍽️ Your restaurant data is ready!</h2>
-      <p>The scraping job completed successfully.</p>
+      <p>The scraping job completed successfully. The Excel file is attached to this email.</p>
       <table style="border-collapse:collapse;margin:16px 0;">
         <tr><td style="padding:6px 12px;background:#f4f6fb;font-weight:bold;">Platform</td>
             <td style="padding:6px 12px;">{platform.capitalize()}</td></tr>
@@ -41,17 +110,15 @@ def send_completion_email(to_email, sheet_url, platform, location, count):
             <td style="padding:6px 12px;">{location}</td></tr>
         <tr><td style="padding:6px 12px;background:#f4f6fb;font-weight:bold;">Restaurants</td>
             <td style="padding:6px 12px;"><strong>{count}</strong></td></tr>
+        <tr><td style="padding:6px 12px;background:#f4f6fb;font-weight:bold;">File</td>
+            <td style="padding:6px 12px;">{filename}</td></tr>
       </table>
-      <a href="{sheet_url}" style="display:inline-block;padding:14px 28px;background:#10b981;
-         color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:1rem;">
-        📊 Open Google Sheet
-      </a>
       <p style="margin-top:24px;color:#6b7280;font-size:0.85rem;">
-        Anyone with the link can view the sheet.<br/>Generated by Restaurant Scraper.
+        Generated by Restaurant Scraper.
       </p>
     </body></html>
     """
-    _send(to_email, subject, html)
+    _send(to_email, subject, html, attachment=excel_bytes, filename=filename)
 
 
 def send_error_email(to_email, platform, location, error_message):
@@ -68,10 +135,7 @@ def send_error_email(to_email, platform, location, error_message):
         <tr><td style="padding:6px 12px;background:#fff5f5;font-weight:bold;">Error</td>
             <td style="padding:6px 12px;color:#ef4444;"><code>{error_message}</code></td></tr>
       </table>
-      <p style="color:#6b7280;font-size:0.85rem;">
-        Please try again or contact support if the issue persists.<br/>
-        Generated by Restaurant Scraper.
-      </p>
+      <p style="color:#6b7280;font-size:0.85rem;">Generated by Restaurant Scraper.</p>
     </body></html>
     """
     _send(to_email, subject, html)

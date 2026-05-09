@@ -52,7 +52,7 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
 
         job['message'] = 'Sending email notification...'
         try:
-            send_completion_email(email, sheet_url, platform, location, len(restaurants))
+            send_completion_email(email, restaurants, platform, location, len(restaurants))
             job['message'] = f'Done! Exported {len(restaurants)} restaurants. Email sent.'
         except Exception as mail_err:
             print(f'[Job {job_id}] Email failed (job still succeeded): {mail_err}')
