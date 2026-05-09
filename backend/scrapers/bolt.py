@@ -1,52 +1,71 @@
 """
-Bolt Food scraper — Playwright + API response interception.
+Bolt Food scraper — direct API calls, no browser required.
 
 Strategy:
-1. Navigate to food.bolt.eu/en/{city_id}-{slug}/ with headless Chromium
-2. Intercept all getScreenContent API responses (they return full provider data)
-3. Scroll the page to trigger lazy-loading of more carousels
-4. Aggregate unique providers across all intercepted responses
-5. Return structured restaurant records
+1. Geocode the city to get lat/lng
+2. Call the Bolt Food getScreenContent API (screen_id=360003) with lat/lng
+3. Parse the providers dict from the response
+4. Return structured restaurant records
 
-This avoids fragile DOM parsing — data comes straight from Bolt's JSON API.
+The API at deliveryuser.live.boltsvc.net is publicly accessible with minimal
+device headers. No Playwright, no headless browser, no Cloudflare cookies needed.
 
-KNOWN_CITIES: add new cities by calling discover_bolt_city_id(city_name, lat, lng).
+KNOWN_CITIES: lat/lng coords for fast lookups without geocoding.
+Add new cities by adding their coordinates.
 """
-import asyncio
 import logging
-import random
-import re
-from datetime import datetime
+import uuid
 
-# KNOWN_CITIES: lowercase city name → (city_id, url_slug)
-KNOWN_CITIES = {
-    "brno":       (456, "brno"),
-    "prague":     (271, "prague"),
-    "bratislava": (270, "bratislava"),
-    "warsaw":     (300, "warsaw"),
-    "riga":       (302, "riga"),
-    "tallinn":    (303, "tallinn"),
-    "vilnius":    (301, "vilnius"),
-    "budapest":   (280, "budapest"),
-    "helsinki":   (250, "helsinki"),
-}
-
-# Prague IP coords — what Bolt's server uses for CZ/SK IPs
-IP_LAT, IP_LNG = 50.0805, 14.467
-
-SUGG_SEL = "[data-testid='screens.DestinationLanding.searchSuggestion']"
+import requests
 
 log = logging.getLogger(__name__)
 
+# KNOWN_CITIES: lowercase city name → (lat, lng)
+KNOWN_CITIES = {
+    "brno":        (49.1951,  16.6068),
+    "prague":      (50.0755,  14.4378),
+    "bratislava":  (48.1486,  17.1077),
+    "warsaw":      (52.2298,  21.0118),
+    "riga":        (56.9460,  24.1059),
+    "tallinn":     (59.4370,  24.7536),
+    "vilnius":     (54.6872,  25.2797),
+    "budapest":    (47.4979,  19.0402),
+    "helsinki":    (60.1699,  24.9384),
+    "berlin":      (52.5200,  13.4050),
+    "vienna":      (48.2082,  16.3738),
+    "stockholm":   (59.3293,  18.0686),
+    "oslo":        (59.9139,  10.7522),
+    "copenhagen":  (55.6761,  12.5683),
+    "amsterdam":   (52.3676,   4.9041),
+    "paris":       (48.8566,   2.3522),
+    "london":      (51.5074,  -0.1278),
+    "madrid":      (40.4168,  -3.7038),
+    "rome":        (41.9028,  12.4964),
+    "lisbon":      (38.7169,  -9.1395),
+    "bucharest":   (44.4268,  26.1025),
+    "sofia":       (42.6977,  23.3219),
+    "athens":      (37.9838,  23.7275),
+    "zagreb":      (45.8150,  15.9819),
+    "belgrade":    (44.7866,  20.4489),
+    "kiev":        (50.4501,  30.5234),
+    "kyiv":        (50.4501,  30.5234),
+    "minsk":       (53.9045,  27.5615),
+    "tbilisi":     (41.6938,  44.8015),
+    "yerevan":     (40.1792,  44.4991),
+    "baku":        (40.4093,  49.8671),
+}
 
-# ── Helpers ────────────────────────────────────────────────────────────────
+BOLT_SCREEN_ID = 360003
+BOLT_API_URL = "https://deliveryuser.live.boltsvc.net/deliveryClient/public/getScreenContent"
 
-async def _rand(lo=1.2, hi=2.8):
-    await asyncio.sleep(random.uniform(lo, hi))
+_SESSION = requests.Session()
+_SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+})
 
 
 def _eta_str(seconds_min: int, seconds_max: int) -> str:
-    """Convert seconds range to '15 to 20 minutes' string."""
     if not seconds_min and not seconds_max:
         return ""
     lo = seconds_min // 60
@@ -55,271 +74,86 @@ def _eta_str(seconds_min: int, seconds_max: int) -> str:
 
 
 def _provider_to_record(provider: dict, city: str) -> dict:
-    """Map a Bolt Food API provider object to our standard record format."""
-    contact = provider.get("contact", {})
+    contact  = provider.get("contact", {}) or {}
     delivery = provider.get("delivery", {}) or {}
     fee_info = delivery.get("fee", {}) or {}
-    eta_info  = provider.get("eta", {}).get("delivery", {}) or {}
-    rating    = provider.get("rating", {}) or {}
-    slug      = provider.get("slug", "")
-    pid       = provider.get("id", "")
+    eta_info = (provider.get("eta", {}) or {}).get("delivery", {}) or {}
+    rating   = provider.get("rating", {}) or {}
+    pid      = provider.get("id", "")
+    slug     = provider.get("slug", "")
 
-    city_id = KNOWN_CITIES.get(city.lower(), (None,))[0]
-    slug_city = KNOWN_CITIES.get(city.lower(), (None, ""))[1]
-    if city_id and slug:
-        platform_url = f"https://food.bolt.eu/en/{city_id}-{slug_city}/p/{pid}-{slug}/"
-    else:
-        platform_url = ""
+    platform_url = f"https://food.bolt.eu/en/p/{pid}-{slug}/" if pid and slug else ""
 
     return {
-        "name":           provider.get("name", ""),
-        "brand_name":     "",
-        "phone":          contact.get("phone", ""),
-        "website":        "",
-        "address":        contact.get("address", ""),
-        "city":           city,
-        "country":        "",
-        "cuisine":        "",
-        "rating":         str(rating.get("value", "")),
-        "review_count":   str(rating.get("count", "")),
-        "delivery_fee":   fee_info.get("price_str", ""),
-        "delivery_time":  _eta_str(eta_info.get("min", 0), eta_info.get("max", 0)),
-        "merchant_name":  "",
-        "business_id":    "",
-        "legal_street":   "",
-        "legal_city":     "",
+        "name":            provider.get("name", ""),
+        "brand_name":      "",
+        "phone":           contact.get("phone", ""),
+        "website":         "",
+        "address":         contact.get("address", ""),
+        "city":            city,
+        "country":         "",
+        "cuisine":         "",
+        "rating":          str(rating.get("value", "")),
+        "review_count":    str(rating.get("count", "")),
+        "delivery_fee":    fee_info.get("price_str", ""),
+        "delivery_time":   _eta_str(eta_info.get("min", 0), eta_info.get("max", 0)),
+        "merchant_name":   "",
+        "business_id":     "",
+        "legal_street":    "",
+        "legal_city":      "",
         "legal_post_code": "",
-        "legal_country":  "",
-        "platform_url":   platform_url,
+        "legal_country":   "",
+        "platform_url":    platform_url,
     }
 
 
-# ── City discovery ─────────────────────────────────────────────────────────
+def _fetch_providers(lat: float, lng: float) -> dict:
+    """Fetch all providers from Bolt Food API for given coordinates."""
+    params = {
+        "screen_id":       BOLT_SCREEN_ID,
+        "delivery_lat":    lat,
+        "delivery_lng":    lng,
+        "deviceId":        str(uuid.uuid4()),
+        "deviceType":      "web",
+        "device_name":     "Chrome",
+        "device_os_version": "124",
+        "language":        "en",
+        "version":         "1.0",
+    }
+    resp = _SESSION.get(BOLT_API_URL, params=params, timeout=20)
+    resp.raise_for_status()
+    body = resp.json()
+    if body.get("code") != 0:
+        raise ValueError(f"Bolt API error: {body.get('message')} (code {body.get('code')})")
+    return body.get("data", {}).get("providers", {}).get("data", {})
 
-async def _discover_city_async(city: str, city_lat: float, city_lng: float) -> tuple | None:
-    """
-    Open food.bolt.eu with mocked geolocation coordinates, type city name,
-    click first matching suggestion, and extract (city_id, slug) from URL.
-    """
-    from playwright.async_api import async_playwright, TimeoutError as PWTimeout
-    import urllib.request as ur
-
-    log.info(f"Bolt: discovering city URL for '{city}' ...")
-
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-        )
-        ctx = await browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
-        )
-        page = await ctx.new_page()
-
-        # Mock suggestDeliveryLocations to return city coords instead of Prague IP
-        async def mock_route(route):
-            url = route.request.url
-            if "suggestDeliveryLocations" in url:
-                url = url.replace(f"lat={IP_LAT}", f"lat={city_lat}") \
-                         .replace(f"lng={IP_LNG}", f"lng={city_lng}") \
-                         .replace("lat=50.0805",   f"lat={city_lat}") \
-                         .replace("lng=14.467",    f"lng={city_lng}")
-                try:
-                    req = ur.Request(url, headers={
-                        k: v for k, v in dict(route.request.headers).items()
-                        if k.lower() not in ('host', 'content-length')
-                    })
-                    with ur.urlopen(req, timeout=10) as resp:
-                        await route.fulfill(status=200, body=resp.read(), content_type="application/json")
-                        return
-                except Exception as e:
-                    log.warning(f"Route mock error: {e}")
-            await route.continue_()
-
-        await page.route("**/*", mock_route)
-        await page.goto("https://food.bolt.eu", timeout=30_000, wait_until="domcontentloaded")
-        await _rand(2, 3)
-
-        for text in ["Allow all", "Accept all"]:
-            try:
-                if await page.locator(f"button:has-text('{text}')").first.is_visible(timeout=3_000):
-                    await page.locator(f"button:has-text('{text}')").first.click()
-                    await _rand(0.8, 1.5)
-                    break
-            except Exception:
-                pass
-
-        try:
-            await page.locator("[data-testid='screens.DestinationLanding.searchInput.container']").first.click(timeout=5_000)
-        except Exception:
-            pass
-
-        await _rand(0.5, 1.0)
-        await page.locator("input[placeholder*='address' i]").first.type(city, delay=random.randint(60, 100))
-        await _rand(3, 5)
-
-        try:
-            await page.wait_for_selector(SUGG_SEL, timeout=12_000)
-        except PWTimeout:
-            log.error(f"No suggestions for '{city}'")
-            await browser.close()
-            return None
-
-        items = await page.locator(SUGG_SEL).all()
-        target = None
-        for item in items:
-            try:
-                if city.lower() in (await item.inner_text(timeout=1_000)).lower():
-                    target = item
-                    break
-            except Exception:
-                pass
-        if not target and items:
-            target = items[0]
-
-        if not target:
-            await browser.close()
-            return None
-
-        await target.click()
-        await _rand(2, 4)
-        url = page.url
-        await browser.close()
-
-    m = re.search(r"/en/(\d+)-([^/?#]+)", url)
-    if m:
-        return int(m.group(1)), m.group(2)
-    return None
-
-
-# ── Main scraper ───────────────────────────────────────────────────────────
-
-async def _scrape_async(city_url: str, city: str, job: dict, max_restaurants: int) -> list:
-    from playwright.async_api import async_playwright, TimeoutError as PWTimeout
-
-    providers_seen: dict[int, dict] = {}  # id → provider record
-
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
-        )
-        ctx = await browser.new_context(
-            viewport={"width": 1280, "height": 900},
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            ),
-            locale="en-US",
-        )
-        page = await ctx.new_page()
-
-        # Intercept getScreenContent responses to harvest provider data
-        async def on_response(resp):
-            if "getScreenContent" in resp.url:
-                try:
-                    body = await resp.json()
-                    data = body.get("data", {})
-                    raw = data.get("providers", {}).get("data", {})
-                    providers = raw if isinstance(raw, dict) else {}
-                    for pid_str, prov in providers.items():
-                        pid = prov.get("id", pid_str)
-                        if pid not in providers_seen:
-                            providers_seen[pid] = prov
-                except Exception:
-                    pass
-
-        page.on("response", on_response)
-
-        await page.goto(city_url, timeout=30_000, wait_until="domcontentloaded")
-        await _rand(2, 3)
-
-        for text in ["Allow all", "Accept all", "Reject all"]:
-            try:
-                if await page.locator(f"button:has-text('{text}')").first.is_visible(timeout=3_000):
-                    await page.locator(f"button:has-text('{text}')").first.click()
-                    await _rand(0.8, 1.5)
-                    break
-            except Exception:
-                pass
-
-        # Wait for first content
-        try:
-            await page.wait_for_selector(
-                "[data-testid='components.ProviderCard.horizontalView']",
-                timeout=20_000,
-            )
-        except PWTimeout:
-            log.warning("ProviderCard not found — waiting for any content")
-            await _rand(3, 5)
-
-        # Scroll to trigger lazy loading of more carousels
-        stalls = 0
-        prev_count = len(providers_seen)
-        scroll_attempts = 0
-
-        while len(providers_seen) < max_restaurants and scroll_attempts < 20:
-            await page.evaluate("window.scrollBy(0, window.innerHeight * 0.85)")
-            await _rand(1.5, 3.0)
-            scroll_attempts += 1
-
-            current_count = len(providers_seen)
-            if current_count == prev_count:
-                stalls += 1
-                if stalls >= 6:
-                    break
-            else:
-                stalls = 0
-                prev_count = current_count
-
-            job["scraped"] = current_count
-            job["progress"] = min(10 + int(current_count / max(max_restaurants, 1) * 85), 95)
-            job["message"] = f"Bolt: collected {current_count} restaurants so far..."
-            log.info(f"Bolt scroll {scroll_attempts}: {current_count} providers ({stalls} stalls)")
-
-        await browser.close()
-
-    log.info(f"Bolt: total providers collected: {len(providers_seen)}")
-    records = [_provider_to_record(p, city) for p in providers_seen.values()]
-    return records[:max_restaurants]
-
-
-# ── Public entry point ─────────────────────────────────────────────────────
 
 def scrape_bolt(location: str, cuisine: str, job: dict) -> list:
-    """
-    Synchronous entry point called by app.py.
-    Runs async Playwright code in a new event loop.
-    """
+    """Synchronous entry point called by app.py."""
     city_key = location.strip().lower().split(",")[0].strip()
-
-    if city_key in KNOWN_CITIES:
-        city_id, slug = KNOWN_CITIES[city_key]
-        log.info(f"Bolt: known city '{city_key}' → city_id={city_id}")
-    else:
-        job["message"] = f"Bolt: finding city URL for '{location}'..."
-        from scrapers.wolt import geocode_location
-        lat, lon, *_ = geocode_location(location)
-        result = asyncio.run(_discover_city_async(location, lat, lon))
-        if not result:
-            raise ValueError(
-                f"Bolt Food does not seem to serve '{location}'. "
-                "Try a larger nearby city or add it to KNOWN_CITIES."
-            )
-        city_id, slug = result
-        log.info(f"Bolt: discovered '{location}' → city_id={city_id}, slug={slug}")
-
-    city_url = f"https://food.bolt.eu/en/{city_id}-{slug}/"
     city_display = location.split(",")[0].strip()
 
-    job["message"] = f"Bolt: loading restaurant data for {city_display}..."
+    job["message"] = f"Bolt: locating {city_display}..."
     job["progress"] = 5
 
-    restaurants = asyncio.run(_scrape_async(city_url, city_display, job, max_restaurants=2000))
+    if city_key in KNOWN_CITIES:
+        lat, lng = KNOWN_CITIES[city_key]
+        log.info(f"Bolt: known city '{city_key}' → ({lat}, {lng})")
+    else:
+        from scrapers.wolt import geocode_location
+        lat, lng, *_ = geocode_location(location)
+        log.info(f"Bolt: geocoded '{location}' → ({lat}, {lng})")
 
-    job["scraped"] = len(restaurants)
-    job["total"]   = len(restaurants)
+    job["message"] = f"Bolt: fetching restaurants for {city_display}..."
+    job["progress"] = 20
+
+    providers = _fetch_providers(lat, lng)
+    log.info(f"Bolt: fetched {len(providers)} providers for {city_display}")
+
+    records = [_provider_to_record(p, city_display) for p in providers.values()]
+
+    job["scraped"]  = len(records)
+    job["total"]    = len(records)
     job["progress"] = 100
-    job["message"]  = f"Bolt: done — {len(restaurants)} restaurants from {city_display}."
-    return restaurants
+    job["message"]  = f"Bolt: done — {len(records)} restaurants from {city_display}."
+    return records
