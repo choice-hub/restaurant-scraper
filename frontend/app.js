@@ -1,3 +1,15 @@
+// Mouse-following cursor glow
+const glow = document.getElementById('cursor-glow');
+let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+let cx = mx, cy = my;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function animateGlow() {
+  cx += (mx - cx) * 0.07;
+  cy += (my - cy) * 0.07;
+  glow.style.transform = `translate(${cx}px, ${cy}px) translate(-50%, -50%)`;
+  requestAnimationFrame(animateGlow);
+})();
+
 // Backend API base URL — update this after deploying to Render
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000'

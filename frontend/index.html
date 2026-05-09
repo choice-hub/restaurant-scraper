@@ -7,10 +7,14 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="bg-orbs"><span></span><span></span><span></span></div>
+  <div id="cursor-glow"></div>
+
   <div class="container">
     <header>
-      <h1>🍽️ Restaurant Scraper</h1>
-      <p class="subtitle">Extract restaurant data from Wolt and receive an Excel file by email</p>
+      <div class="header-badge">⚡ Powered by Wolt</div>
+      <h1>Restaurant Scraper</h1>
+      <p class="subtitle">Extract restaurant data from Wolt and receive an Excel file in your inbox</p>
     </header>
 
     <main class="card">
@@ -21,7 +25,7 @@
         <h2><span class="step-num">1</span> Search Location</h2>
         <div class="input-group autocomplete-wrap">
           <span class="input-icon">📍</span>
-          <input type="text" id="location" placeholder="Type a city or country in Europe..." autocomplete="off" />
+          <input type="text" id="location" placeholder="Type a city in Europe..." autocomplete="off" />
         </div>
         <ul class="autocomplete-list" id="autocompleteList"></ul>
       </section>
@@ -29,7 +33,7 @@
       <!-- Step 2: Email -->
       <section class="step">
         <h2><span class="step-num">2</span> Your Email</h2>
-        <p class="hint">We'll email you an Excel file with the results when scraping is done.</p>
+        <p class="hint">We'll email you an Excel file with all restaurant data when scraping is done.</p>
         <div class="input-group">
           <span class="input-icon">✉️</span>
           <input type="email" id="email" placeholder="your@email.com" />
@@ -45,7 +49,7 @@
     <!-- Progress Panel -->
     <div class="progress-panel card" id="progressPanel" style="display:none">
       <div class="started-banner">
-        <div class="started-icon">🚀</div>
+        <span class="started-icon">🚀</span>
         <h3>Scraping started!</h3>
         <p>Once it's done, you will receive the ready-made Excel file on your email.</p>
         <p class="started-bye">Have a great day! 😊</p>
@@ -58,7 +62,7 @@
 
     <!-- Done Panel -->
     <div class="done-panel card" id="donePanel" style="display:none">
-      <div class="done-icon">✅</div>
+      <span class="done-icon">✅</span>
       <h3>All done!</h3>
       <p id="doneMsg">Your Excel file has been sent to your email.</p>
       <p class="hint">Check your inbox — the file with all restaurant data is waiting for you.</p>
@@ -67,7 +71,7 @@
 
     <!-- Error Panel -->
     <div class="error-panel card" id="errorPanel" style="display:none">
-      <div class="done-icon">❌</div>
+      <span class="done-icon">❌</span>
       <h3>Something went wrong</h3>
       <p id="errorMsg">An error occurred during scraping.</p>
       <button class="btn-new" id="btnRetry">Try Again</button>
