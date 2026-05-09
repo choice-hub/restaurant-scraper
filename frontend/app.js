@@ -89,19 +89,6 @@ const EUROPEAN_CC = new Set([
 ]);
 
 
-// Cuisine chip selection
-document.querySelectorAll('.chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    document.getElementById('cuisineCustom').value = '';
-  });
-});
-
-document.getElementById('cuisineCustom').addEventListener('input', () => {
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-});
-
 // Start scraping
 document.getElementById('btnScrape').addEventListener('click', async () => {
   const platform = 'wolt';
