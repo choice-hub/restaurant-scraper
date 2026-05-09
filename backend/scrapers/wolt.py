@@ -40,6 +40,7 @@ _MERCHANT_RE = re.compile(
     r'"country":"(?P<legal_country>[^"]+)"'
 )
 _PHONE_RE = re.compile(r'"phone":"([^"]+)"')
+_WEBSITE_RE = re.compile(r'"sameAs":"(https?://[^"]+)"')
 
 _geocode_cache: dict = {}
 
@@ -110,6 +111,9 @@ def _fetch_venue_detail(wolt_url: str) -> dict:
         m = _PHONE_RE.search(text)
         if m:
             detail['phone'] = m.group(1)
+        m = _WEBSITE_RE.search(text)
+        if m:
+            detail['website'] = m.group(1)
         m = _MERCHANT_RE.search(text)
         if m:
             detail.update(m.groupdict())
@@ -159,6 +163,7 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
                 'country': venue.get('country', country_slug.upper()),
                 'address': venue.get('address', ''),
                 'phone': '',
+                'website': '',
                 'cuisine': cuisine_str,
                 'rating': str(rating_score) if rating_score else '',
                 'merchant_name': '',
