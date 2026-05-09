@@ -44,13 +44,19 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         job['message'] = 'Exporting to Google Sheets...'
         sheet_url = export_to_sheets(restaurants, platform, location, email)
 
-        job['message'] = 'Sending email notification...'
-        send_completion_email(email, sheet_url, platform, location, len(restaurants))
-
+        # Mark job done BEFORE sending email — email failure should not fail the job
         job['status'] = 'done'
         job['sheet_url'] = sheet_url
         job['message'] = f'Done! Exported {len(restaurants)} restaurants.'
         job['scraped'] = len(restaurants)
+
+        job['message'] = 'Sending email notification...'
+        try:
+            send_completion_email(email, sheet_url, platform, location, len(restaurants))
+            job['message'] = f'Done! Exported {len(restaurants)} restaurants. Email sent.'
+        except Exception as mail_err:
+            print(f'[Job {job_id}] Email failed (job still succeeded): {mail_err}')
+            job['message'] = f'Done! Exported {len(restaurants)} restaurants. (Email failed — check SMTP settings)'
 
     except Exception as e:
         error_msg = str(e)
