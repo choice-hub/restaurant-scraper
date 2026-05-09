@@ -10,7 +10,7 @@ document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; })
   requestAnimationFrame(animateGlow);
 })();
 
-// Backend API base URL — update this after deploying to Render
+// Backend API base URL
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000'
   : 'https://restaurant-scraper-api-ah9e.onrender.com';
@@ -48,13 +48,10 @@ async function fetchSuggestions(q) {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&addressdetails=1&featuretype=city,country&accept-language=en`;
     const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
     const data = await res.json();
-
-    // Filter to Europe only
     const european = data.filter(r => {
       const cc = r.address?.country_code?.toUpperCase();
       return EUROPEAN_CC.has(cc);
     });
-
     renderSuggestions(european.slice(0, 7));
   } catch { closeAC(); }
 }
@@ -63,22 +60,16 @@ function renderSuggestions(items) {
   acList.innerHTML = '';
   acIndex = -1;
   if (!items.length) { closeAC(); return; }
-
   items.forEach(item => {
     const city = item.address?.city || item.address?.town || item.address?.village || item.address?.county || '';
     const country = item.address?.country || '';
     const type = item.type === 'administrative' || item.class === 'boundary' ? 'country' : 'city';
     const label = city ? `${city}, ${country}` : country;
-
     const li = document.createElement('li');
     li.innerHTML = `<span>📍</span><span>${label}</span><span class="ac-type">${type}</span>`;
-    li.addEventListener('click', () => {
-      locationInput.value = label;
-      closeAC();
-    });
+    li.addEventListener('click', () => { locationInput.value = label; closeAC(); });
     acList.appendChild(li);
   });
-
   acList.classList.add('open');
 }
 
@@ -100,13 +91,18 @@ const EUROPEAN_CC = new Set([
   'CH','UA','GB','VA','TR','AZ','AM','GE'
 ]);
 
+// ── Platform selection ────────────────────────────────────────
+function getSelectedPlatform() {
+  const checked = document.querySelector('input[name="platform"]:checked');
+  return checked ? checked.value : 'wolt';
+}
 
-// Start scraping
+// ── Start scraping ────────────────────────────────────────────
 document.getElementById('btnScrape').addEventListener('click', async () => {
-  const platform = 'wolt';
+  const platform = getSelectedPlatform();
   const location = document.getElementById('location').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const cuisine = '';
+  const email    = document.getElementById('email').value.trim();
+  const cuisine  = '';
 
   if (!location) return alert('Please enter a city or country.');
   if (!email || !email.includes('@')) return alert('Please enter a valid email address.');
@@ -120,10 +116,8 @@ document.getElementById('btnScrape').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform, location, cuisine, email })
     });
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to start job');
-
     currentJobId = data.job_id;
     startPolling(currentJobId);
   } catch (err) {
@@ -139,9 +133,7 @@ function startPolling(jobId) {
       const res = await fetch(`${API_BASE}/api/jobs/${jobId}`);
       const job = await res.json();
       updateProgress(job);
-      if (job.status === 'done' || job.status === 'error') {
-        clearInterval(pollInterval);
-      }
+      if (job.status === 'done' || job.status === 'error') clearInterval(pollInterval);
     } catch (e) {
       // network blip — keep polling
     }
@@ -150,20 +142,17 @@ function startPolling(jobId) {
 
 function updateProgress(job) {
   const pct = job.total > 0 ? Math.round((job.scraped / job.total) * 100) : (job.progress || 0);
-
   if (job.status === 'done') {
     showPanel('done');
     document.getElementById('doneMsg').textContent =
       `Scraped ${job.scraped} restaurants from ${job.location}. Excel file sent to your email.`;
     return;
   }
-
   if (job.status === 'error') {
     showPanel('error');
     document.getElementById('errorMsg').textContent = job.message || 'Scraping failed.';
     return;
   }
-
   setProgress(pct, job.message || 'Scraping...');
 }
 
@@ -173,10 +162,10 @@ function setProgress(pct, statusText) {
 }
 
 function showPanel(name) {
-  document.querySelector('main.card').style.display = name === 'form' ? '' : 'none';
+  document.querySelector('main.card').style.display  = name === 'form'     ? '' : 'none';
   document.getElementById('progressPanel').style.display = name === 'progress' ? '' : 'none';
-  document.getElementById('donePanel').style.display = name === 'done' ? '' : 'none';
-  document.getElementById('errorPanel').style.display = name === 'error' ? '' : 'none';
+  document.getElementById('donePanel').style.display     = name === 'done'     ? '' : 'none';
+  document.getElementById('errorPanel').style.display    = name === 'error'    ? '' : 'none';
 }
 
 document.getElementById('btnNew').addEventListener('click', () => {

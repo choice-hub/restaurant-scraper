@@ -172,7 +172,7 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
                 'legal_city': '',
                 'legal_post_code': '',
                 'legal_country': '',
-                'wolt_url': wolt_url,
+                'platform_url': wolt_url,
             })
 
     total = len(results)

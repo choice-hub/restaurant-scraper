@@ -1,0 +1,17 @@
+2026-05-09 21:11:30,265  INFO     Bolt Food scraper | address='Náměstí Svobody 1, Brno' | city='Brno' | max=5
+2026-05-09 21:11:33,600  INFO     Navigating to food.bolt.eu ...
+2026-05-09 21:11:37,519  INFO     Screenshot → shot_01_home_211137.png
+2026-05-09 21:11:37,563  INFO     Cookie banner dismissed: 'Allow all'
+2026-05-09 21:11:38,902  INFO     Screenshot → shot_02_cookies_done_211138.png
+2026-05-09 21:11:38,905  INFO     Address input found: input[placeholder*='address' i]
+2026-05-09 21:11:41,859  INFO     Typed address: Náměstí Svobody 1, Brno
+2026-05-09 21:11:52,744  WARNING  No autocomplete dropdown appeared, pressing Enter
+2026-05-09 21:11:54,740  INFO     Location set: False | URL now: https://food.bolt.eu/en/
+2026-05-09 21:11:54,809  INFO     Screenshot → shot_03_after_location_211154.png
+2026-05-09 21:11:54,809  INFO     Current URL after location: https://food.bolt.eu/en/
+2026-05-09 21:11:54,809  INFO     Waiting for restaurant listings...
+2026-05-09 21:15:39,911  INFO     Screenshot → shot_04_listings_211539.png
+2026-05-09 21:15:39,912  ERROR    No restaurant cards found. Check screenshots in bolt_logs/
+2026-05-09 21:15:39,914  INFO     Page title: Home | Bolt Food
+2026-05-09 21:15:39,914  INFO     Page URL: https://food.bolt.eu/en/
+2026-05-09 21:15:39,919  INFO     Page HTML dumped to bolt_logs/page_dump.html

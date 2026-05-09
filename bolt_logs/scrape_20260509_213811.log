@@ -1,0 +1,55 @@
+2026-05-09 21:38:11,435  INFO     Bolt Food | city='Brno' | max=50 | headless=True | detail=False
+2026-05-09 21:38:11,435  INFO     Using known city: Brno → city_id=456, slug=brno
+2026-05-09 21:38:11,435  INFO     Listing URL: https://food.bolt.eu/en/456-brno/
+2026-05-09 21:38:16,740  INFO     Screenshot → shot_listing_213816.png
+2026-05-09 21:38:16,759  INFO     [1] KFC Brno Náměstí Svobody | ⭐4.4 (500+) | 15 to 20 minutes | 18 Kč
+2026-05-09 21:38:16,766  INFO     [2] McDonald's Náměstí Svobody | ⭐4.4 (500+) | 10 to 15 minutes | 20 Kč
+2026-05-09 21:38:16,775  INFO     [3] Pizza Bombastica Hybešova | ⭐4.7 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,782  INFO     [4] Burger King Brno Česká | ⭐4.4 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,785  INFO     [5] Việt Tám | ⭐4.5 (500+) | 20 to 25 minutes | 24 Kč
+2026-05-09 21:38:16,791  INFO     [6] Himalaya restaurant | ⭐4.5 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,794  INFO     [7] Taiwan bento | ⭐4.5 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,799  INFO     [8] Pizza&burger Stefinie | ⭐4.5 (500+) | 20 to 25 minutes | 24 Kč
+2026-05-09 21:38:16,802  INFO     [9] Pizzerie Omcia | ⭐4.3 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,808  INFO     [10] Kurdský Kebab Lidická | ⭐4.2 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,812  INFO     [11] Indická & nepálská restaurace Buddha | ⭐4.4 (417) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,816  INFO     [12] House Of Hummus | ⭐4.7 (224) | 20 to 25 minutes | 24 Kč
+2026-05-09 21:38:16,825  INFO     [13] ŠACH Kebab - Běhounská | ⭐4.6 (500+) | 10 to 15 minutes | 24 Kč
+2026-05-09 21:38:16,828  INFO     [14] New Era Restaurant | ⭐4.3 (450) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,833  INFO     [15] ROJ Kebab Panská | ⭐4.2 (500+) | 10 to 15 minutes | 24 Kč
+2026-05-09 21:38:16,833  INFO     CSV → bolt_logs/checkpoint_Brno.csv
+2026-05-09 21:38:16,833  INFO     Checkpoint: 15
+2026-05-09 21:38:16,836  INFO     [16] Ten Bubble Bar | ⭐4.3 (338) | 10 to 15 minutes | 24 Kč
+2026-05-09 21:38:16,840  INFO     [17] Wang Sushi | ⭐4.3 (239) | 10 to 15 minutes | 25 Kč
+2026-05-09 21:38:16,850  INFO     [18] Döner Kebap Veveří | ⭐4.2 (500+) | 15 to 20 minutes | 24 Kč
+2026-05-09 21:38:16,852  INFO     [19] Mission2 Kebabovna | ⭐4.4 (50) | 20 to 25 minutes | 24 Kč
+2026-05-09 21:38:16,856  INFO     [20] ViceCity | ⭐4.7 (500+) | 30 to 35 minutes | 24 Kč
+2026-05-09 21:38:16,863  INFO     [21] Kurdish Grill | ⭐4.5 (500+) | 30 to 35 minutes | 24 Kč
+2026-05-09 21:38:16,866  INFO     [22] Cartel Pizza Střed | ⭐4.5 (500+) | 30 to 35 minutes | 24,10 Kč
+2026-05-09 21:38:16,869  INFO     [23] Caruso Pizza & Pasta Bayerova | ⭐4.7 (500+) | 30 to 35 minutes | 24,90 Kč
+2026-05-09 21:38:18,375  INFO     [24] YuYu chicken | ⭐ () | 25 to 30 minutes | 24 Kč
+2026-05-09 21:38:19,885  INFO     [25] Aroma Coffee | ⭐ () | 30 to 35 minutes | 24 Kč
+2026-05-09 21:38:21,394  INFO     [26] Viet Tam Vegan | ⭐ () | 25 to 30 minutes | 24 Kč
+2026-05-09 21:38:22,903  INFO     [27] Portoriko | ⭐ () | 40 to 45 minutes | 65,90 Kč
+2026-05-09 21:38:22,913  INFO     [28] KIMBO KOMBO food & salads | ⭐4.9 (27) | 30 to 35 minutes | 48,10 Kč
+2026-05-09 21:38:22,925  INFO     [29] Berfia Pizzeria | ⭐4.7 (500+) | 25 to 30 minutes | 34,60 Kč
+2026-05-09 21:38:22,934  INFO     [30] Carmel | ⭐4.5 (500+) | 25 to 30 minutes | 26,60 Kč
+2026-05-09 21:38:22,934  INFO     CSV → bolt_logs/checkpoint_Brno.csv
+2026-05-09 21:38:22,934  INFO     Checkpoint: 30
+2026-05-09 21:38:22,947  INFO     [31] Amici Pizza & Burgers - Královo Pole | ⭐4.3 (500+) | 50 to 55 minutes | 42,50 Kč
+2026-05-09 21:38:22,991  INFO     [32] Doebikokota | Úvoz | ⭐4.7 (500+) | 35 to 40 minutes | 24 Kč
+2026-05-09 21:38:22,995  INFO     [33] Sushi Sky Brno | ⭐4.8 (439) | 30 to 35 minutes | 25,50 Kč
+2026-05-09 21:38:23,002  INFO     [34] Pablo Escobar | ⭐4.7 (500+) | 35 to 40 minutes | 35,90 Kč
+2026-05-09 21:38:23,007  INFO     [35] Pizza Bombastica Vychodilova | ⭐4.8 (500+) | 45 to 50 minutes | 52,60 Kč
+2026-05-09 21:38:23,028  INFO     [36] Bageterie Boulevard Masarykova | ⭐4.5 (500+) | 15 to 20 minutes | 24,80 Kč
+2026-05-09 21:38:25,969  INFO     Stall 1/8 | cards=60
+2026-05-09 21:38:27,618  INFO     Stall 2/8 | cards=60
+2026-05-09 21:38:30,933  INFO     Stall 3/8 | cards=60
+2026-05-09 21:38:33,137  INFO     Stall 4/8 | cards=60
+2026-05-09 21:38:34,791  INFO     Stall 5/8 | cards=60
+2026-05-09 21:38:37,940  INFO     Stall 6/8 | cards=60
+2026-05-09 21:38:41,304  INFO     Stall 7/8 | cards=60
+2026-05-09 21:38:42,965  INFO     Stall 8/8 | cards=60
+2026-05-09 21:38:42,965  INFO     Reached end of listing
+2026-05-09 21:38:43,028  INFO     CSV → bolt_Brno_20260509_213811.csv
+2026-05-09 21:38:43,036  INFO     Excel → bolt_Brno_20260509_213811.xlsx

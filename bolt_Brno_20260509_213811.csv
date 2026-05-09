@@ -1,0 +1,37 @@
+restaurant_name,cuisine,rating,review_count,delivery_fee,delivery_time,address,restaurant_url,city,source_timestamp
+KFC Brno Náměstí Svobody,,4.4,500+,18 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/17933-kfc-brno-namesti-svobody/,Brno,2026-05-09T21:38:16.745186
+McDonald's Náměstí Svobody,,4.4,500+,20 Kč,10 to 15 minutes,,https://food.bolt.eu/en/456-brno/p/18791-mcdonalds-namesti-svobody/,Brno,2026-05-09T21:38:16.745186
+Pizza Bombastica Hybešova,,4.7,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/22084-pizza-bombastica-hybesova/,Brno,2026-05-09T21:38:16.745186
+Burger King Brno Česká,,4.4,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/19067-burger-king-brno-ceska/,Brno,2026-05-09T21:38:16.745186
+Việt Tám,,4.5,500+,24 Kč,20 to 25 minutes,,https://food.bolt.eu/en/456-brno/p/17344-viet-tam/,Brno,2026-05-09T21:38:16.745186
+Himalaya restaurant,,4.5,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/19666-himalaya-restaurant/,Brno,2026-05-09T21:38:16.745186
+Taiwan bento,,4.5,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/21688-taiwan-bento/,Brno,2026-05-09T21:38:16.745186
+Pizza&burger Stefinie,,4.5,500+,24 Kč,20 to 25 minutes,,https://food.bolt.eu/en/456-brno/p/43240-pizzaburger-stefinie/,Brno,2026-05-09T21:38:16.745186
+Pizzerie Omcia,,4.3,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/43636-pizzerie-omcia/,Brno,2026-05-09T21:38:16.745186
+Kurdský Kebab Lidická,,4.2,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/19480-kurdsky-kebab-lidicka/,Brno,2026-05-09T21:38:16.745186
+Indická & nepálská restaurace Buddha,,4.4,417,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/78976-indicka-nepalska-restaurace-buddha/,Brno,2026-05-09T21:38:16.745186
+House Of Hummus,,4.7,224,24 Kč,20 to 25 minutes,,https://food.bolt.eu/en/456-brno/p/114635-house-of-hummus/,Brno,2026-05-09T21:38:16.745186
+ŠACH Kebab - Běhounská,,4.6,500+,24 Kč,10 to 15 minutes,,https://food.bolt.eu/en/456-brno/p/56712-sach-kebab-behounska/,Brno,2026-05-09T21:38:16.745186
+New Era Restaurant,,4.3,450,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/21939-new-era-restaurant/,Brno,2026-05-09T21:38:16.745186
+ROJ Kebab Panská,,4.2,500+,24 Kč,10 to 15 minutes,,https://food.bolt.eu/en/456-brno/p/69109-roj-kebab-panska/,Brno,2026-05-09T21:38:16.745186
+Ten Bubble Bar,,4.3,338,24 Kč,10 to 15 minutes,,https://food.bolt.eu/en/456-brno/p/59344-ten-bubble-bar/,Brno,2026-05-09T21:38:16.745186
+Wang Sushi,,4.3,239,25 Kč,10 to 15 minutes,,https://food.bolt.eu/en/456-brno/p/128339-wang-sushi/,Brno,2026-05-09T21:38:16.745186
+Döner Kebap Veveří,,4.2,500+,24 Kč,15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/111408-doner-kebap-veveri/,Brno,2026-05-09T21:38:16.745186
+Mission2 Kebabovna,,4.4,50,24 Kč,20 to 25 minutes,,https://food.bolt.eu/en/456-brno/p/178004-mission2-kebabovna/,Brno,2026-05-09T21:38:16.745186
+ViceCity,,4.7,500+,24 Kč,30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/164912-vicecity/,Brno,2026-05-09T21:38:16.745186
+Kurdish Grill,,4.5,500+,24 Kč,30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/175061-kurdish-grill/,Brno,2026-05-09T21:38:16.745186
+Cartel Pizza Střed,,4.5,500+,"24,10 Kč",30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/57058-cartel-pizza-stred/,Brno,2026-05-09T21:38:16.745186
+Caruso Pizza & Pasta Bayerova,,4.7,500+,"24,90 Kč",30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/102370-caruso-pizza-pasta-bayerova/,Brno,2026-05-09T21:38:16.745186
+YuYu chicken,,,,24 Kč,25 to 30 minutes,,https://food.bolt.eu/en/456-brno/p/197078-yuyu-chicken/,Brno,2026-05-09T21:38:16.745186
+Aroma Coffee,,,,24 Kč,30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/200601-aroma-coffee/,Brno,2026-05-09T21:38:16.745186
+Viet Tam Vegan,,,,24 Kč,25 to 30 minutes,,https://food.bolt.eu/en/456-brno/p/200630-viet-tam-vegan/,Brno,2026-05-09T21:38:16.745186
+Portoriko,,,,"65,90 Kč",40 to 45 minutes,,https://food.bolt.eu/en/456-brno/p/194896-portoriko/,Brno,2026-05-09T21:38:16.745186
+KIMBO KOMBO food & salads,,4.9,27,"48,10 Kč",30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/197043-kimbo-kombo-food-salads/,Brno,2026-05-09T21:38:16.745186
+Berfia Pizzeria,,4.7,500+,"34,60 Kč",25 to 30 minutes,,https://food.bolt.eu/en/456-brno/p/30773-berfia-pizzeria/,Brno,2026-05-09T21:38:16.745186
+Carmel,,4.5,500+,"26,60 Kč",25 to 30 minutes,,https://food.bolt.eu/en/456-brno/p/46070-carmel/,Brno,2026-05-09T21:38:16.745186
+Amici Pizza & Burgers - Královo Pole,,4.3,500+,"42,50 Kč",50 to 55 minutes,,https://food.bolt.eu/en/456-brno/p/48634-amici-pizza-burgers-kralovo-pole/,Brno,2026-05-09T21:38:16.745186
+Doebikokota | Úvoz,,4.7,500+,24 Kč,35 to 40 minutes,,https://food.bolt.eu/en/456-brno/p/101331-doebikokota-uvoz/,Brno,2026-05-09T21:38:16.745186
+Sushi Sky Brno,,4.8,439,"25,50 Kč",30 to 35 minutes,,https://food.bolt.eu/en/456-brno/p/162937-sushi-sky-brno/,Brno,2026-05-09T21:38:16.745186
+Pablo Escobar,,4.7,500+,"35,90 Kč",35 to 40 minutes,,https://food.bolt.eu/en/456-brno/p/44605-pablo-escobar/,Brno,2026-05-09T21:38:16.745186
+Pizza Bombastica Vychodilova,,4.8,500+,"52,60 Kč",45 to 50 minutes,,https://food.bolt.eu/en/456-brno/p/47965-pizza-bombastica-vychodilova/,Brno,2026-05-09T21:38:16.745186
+Bageterie Boulevard Masarykova,,4.5,500+,"24,80 Kč",15 to 20 minutes,,https://food.bolt.eu/en/456-brno/p/17907-bageterie-boulevard-masarykova/,Brno,2026-05-09T21:38:16.745186

@@ -276,6 +276,79 @@ header .subtitle {
   flex-shrink: 0;
 }
 
+/* ── Platform selector ──────────────────────────────────────── */
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.platform-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  text-align: center;
+  position: relative;
+}
+
+.platform-option input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+}
+
+.platform-option:hover {
+  border-color: rgba(0,157,224,0.4);
+  background: rgba(0,157,224,0.06);
+}
+
+.platform-option:has(input:checked) {
+  border-color: rgba(0,157,224,0.7);
+  background: rgba(0,157,224,0.1);
+  box-shadow: 0 0 0 3px rgba(0,157,224,0.15);
+}
+
+#opt-bolt:has(input:checked) {
+  border-color: rgba(52,199,89,0.7);
+  background: rgba(52,199,89,0.08);
+  box-shadow: 0 0 0 3px rgba(52,199,89,0.12);
+}
+
+#opt-both:has(input:checked) {
+  border-color: rgba(168,85,247,0.7);
+  background: rgba(168,85,247,0.08);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.12);
+}
+
+.platform-icon { font-size: 1.5rem; }
+
+.platform-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.2px;
+}
+
+.platform-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 400px) {
+  .platform-option { padding: 12px 6px; }
+  .platform-name { font-size: 0.78rem; }
+  .platform-sub { display: none; }
+}
+
 /* ── Scrape button ──────────────────────────────────────────── */
 .btn-scrape {
   width: 100%;

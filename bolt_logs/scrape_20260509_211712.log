@@ -1,0 +1,19 @@
+2026-05-09 21:17:12,111  INFO     Bolt Food scraper | address='Joštova 4, Brno' | city='Brno' | max=10
+2026-05-09 21:17:13,092  INFO     Navigating to food.bolt.eu ...
+2026-05-09 21:17:16,541  INFO     Screenshot → shot_01_home_211716.png
+2026-05-09 21:17:16,583  INFO     Cookie banner dismissed: 'Allow all'
+2026-05-09 21:17:17,611  INFO     Screenshot → shot_02_cookies_done_211717.png
+2026-05-09 21:17:18,643  INFO     Clicked address input container
+2026-05-09 21:17:22,653  INFO     Input found: input[placeholder*='address' i]
+2026-05-09 21:17:24,412  INFO     Typed: 'Joštova 4, Brno'
+2026-05-09 21:17:25,206  INFO     Got 4 suggestions:
+2026-05-09 21:17:25,211  INFO       → 'Bínova 4, Prague 182 00'
+2026-05-09 21:17:25,215  INFO       → 'Bernolákova 4, Prague 142 00'
+2026-05-09 21:17:25,218  INFO       → 'Za Poříčskou Bránou 4, Prague 186 00'
+2026-05-09 21:17:25,221  INFO       → 'Brňovská 4, Prague 155 21'
+2026-05-09 21:17:25,223  INFO     Clicking: 'Bínova 4, Prague 182 00'
+2026-05-09 21:17:25,460  INFO     Navigated to: https://food.bolt.eu/en/2562-ostrov/
+2026-05-09 21:17:28,179  INFO     Location set: True | URL now: https://food.bolt.eu/en/2562-ostrov/
+2026-05-09 21:17:28,384  INFO     Screenshot → shot_03_after_location_211728.png
+2026-05-09 21:17:28,384  INFO     Current URL after location: https://food.bolt.eu/en/2562-ostrov/
+2026-05-09 21:17:28,384  INFO     Waiting for restaurant listings...

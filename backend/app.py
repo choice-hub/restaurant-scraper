@@ -10,7 +10,6 @@ from scrapers.wolt import scrape_wolt
 from scrapers.bolt import scrape_bolt
 from scrapers.foodora import scrape_foodora
 from scrapers.glovo import scrape_glovo
-from services.sheets import export_to_sheets
 from services.email_service import send_completion_email, send_error_email
 
 load_dotenv()
@@ -18,14 +17,13 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# In-memory job store (persists as long as the server is running)
 jobs = {}
 
 SCRAPERS = {
-    'wolt': scrape_wolt,
-    'bolt': scrape_bolt,
+    'wolt':    scrape_wolt,
+    'bolt':    scrape_bolt,
     'foodora': scrape_foodora,
-    'glovo': scrape_glovo,
+    'glovo':   scrape_glovo,
 }
 
 
@@ -33,30 +31,30 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
     job = jobs[job_id]
     try:
         job['status'] = 'running'
-        job['message'] = f'Searching for restaurants in {location}...'
 
-        scraper = SCRAPERS.get(platform)
-        if not scraper:
-            raise ValueError(f'Unknown platform: {platform}')
+        platforms_to_run = ['wolt', 'bolt'] if platform == 'both' else [platform]
+        results_by_platform = {}
 
-        restaurants = scraper(location, cuisine, job)
+        for plat in platforms_to_run:
+            scraper = SCRAPERS.get(plat)
+            if not scraper:
+                raise ValueError(f'Unknown platform: {plat}')
 
-        job['message'] = 'Exporting to Google Sheets...'
-        sheet_url = export_to_sheets(restaurants, platform, location, email)
+            job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
+            restaurants = scraper(location, cuisine, job)
+            results_by_platform[plat] = restaurants
 
-        # Mark job done BEFORE sending email — email failure should not fail the job
+        total = sum(len(v) for v in results_by_platform.values())
         job['status'] = 'done'
-        job['sheet_url'] = sheet_url
-        job['message'] = f'Done! Exported {len(restaurants)} restaurants.'
-        job['scraped'] = len(restaurants)
+        job['scraped'] = total
+        job['message'] = f'Done! Found {total} restaurants. Sending email...'
 
-        job['message'] = 'Sending email notification...'
         try:
-            send_completion_email(email, restaurants, platform, location, len(restaurants))
-            job['message'] = f'Done! Exported {len(restaurants)} restaurants. Email sent.'
+            send_completion_email(email, results_by_platform, location)
+            job['message'] = f'Done! {total} restaurants. Email sent.'
         except Exception as mail_err:
-            print(f'[Job {job_id}] Email failed (job still succeeded): {mail_err}')
-            job['message'] = f'Done! Exported {len(restaurants)} restaurants. (Email failed — check SMTP settings)'
+            print(f'[Job {job_id}] Email failed: {mail_err}')
+            job['message'] = f'Done! {total} restaurants. (Email failed — check SMTP settings)'
 
     except Exception as e:
         error_msg = str(e)
@@ -66,7 +64,7 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         try:
             send_error_email(email, platform, location, error_msg)
         except Exception as mail_err:
-            print(f'[Job {job_id}] Failed to send error email: {mail_err}')
+            print(f'[Job {job_id}] Error email failed: {mail_err}')
 
 
 @app.route('/api/scrape', methods=['POST'])
@@ -74,14 +72,14 @@ def start_scrape():
     data = request.get_json()
     platform = data.get('platform', 'wolt')
     location = data.get('location', '').strip()
-    cuisine = data.get('cuisine', '').strip()
-    email = data.get('email', '').strip()
+    cuisine  = data.get('cuisine', '').strip()
+    email    = data.get('email', '').strip()
 
     if not location:
         return jsonify({'error': 'Location is required'}), 400
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400
-    if platform not in SCRAPERS:
+    if platform not in list(SCRAPERS.keys()) + ['both']:
         return jsonify({'error': f'Unknown platform: {platform}'}), 400
 
     job_id = str(uuid.uuid4())
@@ -97,14 +95,13 @@ def start_scrape():
         'scraped': 0,
         'failed': 0,
         'progress': 0,
-        'sheet_url': None,
         'created_at': datetime.utcnow().isoformat(),
     }
 
     thread = threading.Thread(
         target=run_scrape_job,
         args=(job_id, platform, location, cuisine, email),
-        daemon=True
+        daemon=True,
     )
     thread.start()
 

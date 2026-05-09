@@ -1,0 +1,11 @@
+2026-05-09 21:04:53,259  INFO     Starting Bolt Food scraper: Brno, Czech Republic | max=5 | headless=True
+2026-05-09 21:04:54,678  INFO     Opening food.bolt.eu ...
+2026-05-09 21:04:58,877  INFO     Screenshot saved → bolt_logs/screenshot_01_homepage_210458.png
+2026-05-09 21:04:58,877  INFO     Setting location to: Brno
+2026-05-09 21:05:03,893  INFO     Found location input: input[placeholder*='address' i]
+2026-05-09 21:05:25,577  INFO     Screenshot saved → bolt_logs/screenshot_02_after_location_210525.png
+2026-05-09 21:05:25,578  INFO     Waiting for restaurant cards to appear...
+2026-05-09 21:09:25,600  ERROR    No restaurant cards found after waiting. Taking screenshot.
+2026-05-09 21:09:25,664  INFO     Screenshot saved → bolt_logs/screenshot_03_no_listings_210925.png
+2026-05-09 21:09:25,665  INFO     Current URL: https://food.bolt.eu/en/
+2026-05-09 21:09:25,666  INFO     Page title: Home | Bolt Food

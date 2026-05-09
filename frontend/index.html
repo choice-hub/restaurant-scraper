@@ -12,17 +12,41 @@
 
   <div class="container">
     <header>
-      <div class="header-badge">⚡ Powered by Wolt</div>
+      <div class="header-badge">⚡ Wolt &amp; Bolt Food</div>
       <h1>Restaurant Scraper</h1>
-      <p class="subtitle">Extract restaurant data from Wolt and receive an Excel file in your inbox</p>
+      <p class="subtitle">Extract restaurant data and receive an Excel file in your inbox</p>
     </header>
 
     <main class="card">
-      <input type="hidden" name="platform" value="wolt" />
 
-      <!-- Step 1: Location -->
+      <!-- Step 1: Platform -->
       <section class="step">
-        <h2><span class="step-num">1</span> Search Location</h2>
+        <h2><span class="step-num">1</span> Platform</h2>
+        <div class="platform-grid">
+          <label class="platform-option" id="opt-wolt">
+            <input type="radio" name="platform" value="wolt" checked />
+            <span class="platform-icon">🔵</span>
+            <span class="platform-name">Wolt</span>
+            <span class="platform-sub">Rich data<br>phone, legal info</span>
+          </label>
+          <label class="platform-option" id="opt-bolt">
+            <input type="radio" name="platform" value="bolt" />
+            <span class="platform-icon">🟢</span>
+            <span class="platform-name">Bolt Food</span>
+            <span class="platform-sub">Rating, delivery<br>fee &amp; time</span>
+          </label>
+          <label class="platform-option" id="opt-both">
+            <input type="radio" name="platform" value="both" />
+            <span class="platform-icon">✨</span>
+            <span class="platform-name">Both</span>
+            <span class="platform-sub">2 tabs in<br>Excel file</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Step 2: Location -->
+      <section class="step">
+        <h2><span class="step-num">2</span> Search Location</h2>
         <div class="input-group autocomplete-wrap">
           <span class="input-icon">📍</span>
           <input type="text" id="location" placeholder="Type a city in Europe..." autocomplete="off" />
@@ -30,9 +54,9 @@
         <ul class="autocomplete-list" id="autocompleteList"></ul>
       </section>
 
-      <!-- Step 2: Email -->
+      <!-- Step 3: Email -->
       <section class="step">
-        <h2><span class="step-num">2</span> Your Email</h2>
+        <h2><span class="step-num">3</span> Your Email</h2>
         <p class="hint">We'll email you an Excel file with all restaurant data when scraping is done.</p>
         <div class="input-group">
           <span class="input-icon">✉️</span>
