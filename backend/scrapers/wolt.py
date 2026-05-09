@@ -45,14 +45,20 @@ _PHONE_RE = re.compile(r'"phone":"([^"]+)"')
 def geocode_location(location: str) -> tuple[float, float, str, str, str]:
     """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim.
     Returns (lat, lon, formatted, city_slug, country_slug)."""
+    import time
     url = 'https://nominatim.openstreetmap.org/search'
-    r = requests.get(
-        url,
-        params={'q': location, 'format': 'json', 'limit': 1, 'addressdetails': 1},
-        headers={'User-Agent': 'RestaurantScraper/1.0', 'Accept-Language': 'en'},
-        timeout=10
-    )
-    r.raise_for_status()
+    for attempt in range(4):
+        r = requests.get(
+            url,
+            params={'q': location, 'format': 'json', 'limit': 1, 'addressdetails': 1},
+            headers={'User-Agent': 'RestaurantScraper/1.0', 'Accept-Language': 'en'},
+            timeout=10
+        )
+        if r.status_code == 429:
+            time.sleep(2 ** attempt)
+            continue
+        r.raise_for_status()
+        break
     results = r.json()
     if not results:
         raise ValueError(f'Could not find location: {location}. Try a more specific city name.')
