@@ -18,14 +18,20 @@ SCOPES = [
 ]
 
 COLUMNS = [
-    'Name',
-    'City',
-    'Address',
+    'Restaurant Name',
+    'Brand Name',
     'Phone',
-    'Website',
-    'Wolt ID',
+    'Address',
+    'City',
+    'Country',
     'Cuisine / Kitchen',
     'Rating',
+    'Merchant / Legal Company',
+    'Business ID',
+    'Legal Street Address',
+    'Legal City',
+    'Legal Post Code',
+    'Legal Country',
     'Platform URL',
 ]
 
@@ -92,13 +98,19 @@ def export_to_sheets(restaurants: list[dict], platform: str, location: str, user
     for r in restaurants:
         rows.append([
             r.get('name', ''),
-            r.get('city', ''),
-            r.get('address', ''),
+            r.get('brand_name', ''),
             r.get('phone', ''),
-            r.get('website', ''),
-            r.get('legal_id', ''),
+            r.get('address', ''),
+            r.get('city', ''),
+            r.get('country', ''),
             r.get('cuisine', ''),
             r.get('rating', ''),
+            r.get('merchant_name', ''),
+            r.get('business_id', ''),
+            r.get('legal_street', ''),
+            r.get('legal_city', ''),
+            r.get('legal_post_code', ''),
+            r.get('legal_country', ''),
             r.get('wolt_url', ''),
         ])
 
