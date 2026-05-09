@@ -114,7 +114,6 @@ document.getElementById('btnScrape').addEventListener('click', async () => {
 
   showPanel('progress');
   setProgress(0, 'Connecting to scraper...');
-  document.getElementById('progressStats').style.display = 'none';
 
   try {
     const res = await fetch(`${API_BASE}/api/scrape`, {
@@ -167,10 +166,6 @@ function updateProgress(job) {
   }
 
   setProgress(pct, job.message || 'Scraping...');
-  document.getElementById('progressStats').style.display = 'flex';
-  document.getElementById('statFound').textContent = job.total || 0;
-  document.getElementById('statScraped').textContent = job.scraped || 0;
-  document.getElementById('statFailed').textContent = job.failed || 0;
 }
 
 function setProgress(pct, statusText) {
