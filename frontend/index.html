@@ -12,7 +12,7 @@
 
   <div class="container">
     <header>
-      <div class="header-badge">⚡ Wolt &amp; Bolt Food</div>
+      <div class="header-badge">⚡ Wolt · Bolt · Foodora</div>
       <h1>Restaurant Scraper</h1>
       <p class="subtitle">Extract restaurant data and receive an Excel file in your inbox</p>
     </header>
@@ -21,31 +21,28 @@
 
       <!-- Step 1: Platform -->
       <section class="step">
-        <h2><span class="step-num">1</span> Platform</h2>
+        <h2><span class="step-num">1</span> Platforms</h2>
         <div class="platform-grid">
           <label class="platform-option" id="opt-wolt">
-            <input type="radio" name="platform" value="wolt" checked />
+            <input type="checkbox" name="platform" value="wolt" checked />
             <span class="platform-icon">🔵</span>
             <span class="platform-name">Wolt</span>
             <span class="platform-sub">Rich data<br>phone, legal info</span>
+            <span class="check-mark">✓</span>
           </label>
           <label class="platform-option" id="opt-bolt">
-            <input type="radio" name="platform" value="bolt" />
+            <input type="checkbox" name="platform" value="bolt" />
             <span class="platform-icon">🟢</span>
             <span class="platform-name">Bolt Food</span>
             <span class="platform-sub">Rating, delivery<br>fee &amp; time</span>
+            <span class="check-mark">✓</span>
           </label>
           <label class="platform-option" id="opt-foodora">
-            <input type="radio" name="platform" value="foodora" />
+            <input type="checkbox" name="platform" value="foodora" />
             <span class="platform-icon">🔴</span>
             <span class="platform-name">Foodora</span>
             <span class="platform-sub">CZ, AT, HU,<br>NO, SE markets</span>
-          </label>
-          <label class="platform-option" id="opt-both">
-            <input type="radio" name="platform" value="both" />
-            <span class="platform-icon">✨</span>
-            <span class="platform-name">Both</span>
-            <span class="platform-sub">2 tabs in<br>Excel file</span>
+            <span class="check-mark">✓</span>
           </label>
         </div>
       </section>
@@ -78,24 +75,37 @@
 
     <!-- Progress Panel -->
     <div class="progress-panel card" id="progressPanel" style="display:none">
-      <div class="started-banner">
-        <span class="started-icon">🚀</span>
-        <h3>Scraping started!</h3>
-        <p>Once it's done, you will receive the ready-made Excel file on your email.</p>
-        <p class="started-bye">Have a great day! 😊</p>
+      <div class="progress-header">
+        <span class="progress-rocket">🚀</span>
+        <div class="progress-header-text">
+          <h3>Scraping in progress</h3>
+          <p class="progress-location" id="progressLocation"></p>
+        </div>
+        <div class="eta-badge" id="etaBadge" style="display:none">
+          <span>⏱</span><span id="etaText">—</span>
+        </div>
       </div>
+
+      <div class="platform-rows" id="platformRows"></div>
+
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="progressBar" style="width:0%"></div>
       </div>
-      <p class="progress-status" id="progressStatus">Initializing...</p>
+      <div class="progress-footer">
+        <span class="progress-status" id="progressStatus">Starting...</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
     </div>
 
     <!-- Done Panel -->
     <div class="done-panel card" id="donePanel" style="display:none">
       <span class="done-icon">✅</span>
       <h3>All done!</h3>
-      <p id="doneMsg">Your Excel file has been sent to your email.</p>
-      <p class="hint">Check your inbox — the file with all restaurant data is waiting for you.</p>
+      <p id="doneMsg"></p>
+      <a class="btn-download" id="btnDownload" href="#" download>
+        <span>📥</span> Download Excel File
+      </a>
+      <p class="hint email-hint">Also sent to your email inbox.</p>
       <button class="btn-new" id="btnNew">Start New Scrape</button>
     </div>
 

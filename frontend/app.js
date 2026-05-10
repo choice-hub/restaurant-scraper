@@ -17,6 +17,10 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 
 let currentJobId = null;
 let pollInterval = null;
+let jobStartTime = null;
+
+const PLATFORM_ICONS  = { wolt: '🔵', bolt: '🟢', foodora: '🔴', glovo: '🟡' };
+const PLATFORM_LABELS = { wolt: 'Wolt', bolt: 'Bolt Food', foodora: 'Foodora', glovo: 'Glovo' };
 
 // ── Autocomplete ─────────────────────────────────────────────
 const locationInput = document.getElementById('location');
@@ -92,29 +96,31 @@ const EUROPEAN_CC = new Set([
 ]);
 
 // ── Platform selection ────────────────────────────────────────
-function getSelectedPlatform() {
-  const checked = document.querySelector('input[name="platform"]:checked');
-  return checked ? checked.value : 'wolt';
+function getSelectedPlatforms() {
+  return [...document.querySelectorAll('input[name="platform"]:checked')].map(el => el.value);
 }
 
 // ── Start scraping ────────────────────────────────────────────
 document.getElementById('btnScrape').addEventListener('click', async () => {
-  const platform = getSelectedPlatform();
-  const location = document.getElementById('location').value.trim();
-  const email    = document.getElementById('email').value.trim();
-  const cuisine  = '';
+  const platforms = getSelectedPlatforms();
+  const location  = document.getElementById('location').value.trim();
+  const email     = document.getElementById('email').value.trim();
 
+  if (!platforms.length) return alert('Please select at least one platform.');
   if (!location) return alert('Please enter a city or country.');
   if (!email || !email.includes('@')) return alert('Please enter a valid email address.');
 
+  jobStartTime = null;
   showPanel('progress');
-  setProgress(0, 'Connecting to scraper...');
+  document.getElementById('progressLocation').textContent = location;
+  renderPlatformRows(platforms);
+  setProgress(0, 'Connecting...');
 
   try {
     const res = await fetch(`${API_BASE}/api/scrape`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform, location, cuisine, email })
+      body: JSON.stringify({ platforms, location, cuisine: '', email })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to start job');
@@ -126,6 +132,42 @@ document.getElementById('btnScrape').addEventListener('click', async () => {
   }
 });
 
+// ── Per-platform rows ─────────────────────────────────────────
+function renderPlatformRows(platforms) {
+  const container = document.getElementById('platformRows');
+  container.innerHTML = '';
+  platforms.forEach(plat => {
+    const row = document.createElement('div');
+    row.className = 'platform-row';
+    row.id = `row-${plat}`;
+    row.innerHTML = `
+      <span class="plat-icon">${PLATFORM_ICONS[plat] || '⚪'}</span>
+      <span class="plat-name">${PLATFORM_LABELS[plat] || plat}</span>
+      <span class="plat-status pending" id="status-${plat}">Queued</span>
+      <span class="plat-count" id="count-${plat}"></span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function updatePlatformRows(detail) {
+  if (!detail) return;
+  Object.entries(detail).forEach(([plat, info]) => {
+    const statusEl = document.getElementById(`status-${plat}`);
+    const countEl  = document.getElementById(`count-${plat}`);
+    if (!statusEl) return;
+
+    const s = info.status;
+    statusEl.className = `plat-status ${s}`;
+    statusEl.textContent = s === 'running' ? 'Scraping...' : s === 'done' ? 'Done ✓' : 'Queued';
+
+    if (countEl && info.scraped > 0) {
+      countEl.textContent = info.scraped.toLocaleString() + ' restaurants';
+    }
+  });
+}
+
+// ── Polling ───────────────────────────────────────────────────
 function startPolling(jobId) {
   clearInterval(pollInterval);
   pollInterval = setInterval(async () => {
@@ -134,42 +176,77 @@ function startPolling(jobId) {
       const job = await res.json();
       updateProgress(job);
       if (job.status === 'done' || job.status === 'error') clearInterval(pollInterval);
-    } catch (e) {
+    } catch {
       // network blip — keep polling
     }
-  }, 2500);
+  }, 2000);
 }
 
 function updateProgress(job) {
-  const pct = job.total > 0 ? Math.round((job.scraped / job.total) * 100) : (job.progress || 0);
+  const pct = job.progress || 0;
+
+  updatePlatformRows(job.platforms_detail);
+
   if (job.status === 'done') {
     showPanel('done');
+    const total = job.scraped || 0;
     document.getElementById('doneMsg').textContent =
-      `Scraped ${job.scraped} restaurants from ${job.location}. Excel file sent to your email.`;
+      `${total.toLocaleString()} restaurants scraped from ${job.location}.`;
+    if (job.has_file) {
+      const btn = document.getElementById('btnDownload');
+      btn.href = `${API_BASE}/api/jobs/${job.id}/download`;
+      btn.style.display = 'inline-flex';
+    }
     return;
   }
+
   if (job.status === 'error') {
     showPanel('error');
     document.getElementById('errorMsg').textContent = job.message || 'Scraping failed.';
     return;
   }
+
   setProgress(pct, job.message || 'Scraping...');
+  updateETA(pct);
+}
+
+// ── ETA ───────────────────────────────────────────────────────
+function updateETA(pct) {
+  if (pct < 3) { jobStartTime = Date.now(); return; }
+  if (!jobStartTime || pct >= 99) return;
+
+  const elapsed = (Date.now() - jobStartTime) / 1000;
+  const rate = pct / elapsed; // % per second
+  if (rate <= 0) return;
+
+  const remaining = Math.round((100 - pct) / rate);
+  const badge = document.getElementById('etaBadge');
+  const text  = document.getElementById('etaText');
+  badge.style.display = 'flex';
+
+  if (remaining < 60)       text.textContent = `~${remaining}s left`;
+  else if (remaining < 3600) text.textContent = `~${Math.round(remaining / 60)}m left`;
+  else                       text.textContent = `~${Math.round(remaining / 3600)}h left`;
 }
 
 function setProgress(pct, statusText) {
   document.getElementById('progressBar').style.width = pct + '%';
   document.getElementById('progressStatus').textContent = statusText;
+  document.getElementById('progressPct').textContent = pct + '%';
 }
 
+// ── Panel switching ───────────────────────────────────────────
 function showPanel(name) {
-  document.querySelector('main.card').style.display  = name === 'form'     ? '' : 'none';
-  document.getElementById('progressPanel').style.display = name === 'progress' ? '' : 'none';
-  document.getElementById('donePanel').style.display     = name === 'done'     ? '' : 'none';
-  document.getElementById('errorPanel').style.display    = name === 'error'    ? '' : 'none';
+  document.querySelector('main.card').style.display       = name === 'form'     ? '' : 'none';
+  document.getElementById('progressPanel').style.display  = name === 'progress' ? '' : 'none';
+  document.getElementById('donePanel').style.display      = name === 'done'     ? '' : 'none';
+  document.getElementById('errorPanel').style.display     = name === 'error'    ? '' : 'none';
 }
 
 document.getElementById('btnNew').addEventListener('click', () => {
   clearInterval(pollInterval);
+  document.getElementById('btnDownload').style.display = 'none';
+  document.getElementById('etaBadge').style.display = 'none';
   showPanel('form');
 });
 

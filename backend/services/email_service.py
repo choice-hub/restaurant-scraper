@@ -92,7 +92,7 @@ def _add_sheet(wb, platform: str, location: str, restaurants: list):
         ws.column_dimensions[col_letter].width = min(max_len + 4, 50)
 
 
-def _build_excel(results_by_platform: dict, location: str) -> bytes:
+def build_excel(results_by_platform: dict, location: str) -> bytes:
     """Build an Excel file with one sheet per platform."""
     wb = openpyxl.Workbook()
     wb.remove(wb.active)  # remove default empty sheet
@@ -142,7 +142,7 @@ def send_completion_email(to_email: str, results_by_platform: dict, location: st
     results_by_platform: {"wolt": [...], "bolt": [...]}
     Builds a single Excel with one tab per platform and emails it.
     """
-    excel_bytes = _build_excel(results_by_platform, location)
+    excel_bytes = build_excel(results_by_platform, location)
 
     platforms_str = ' + '.join(p.capitalize() for p in results_by_platform if results_by_platform[p])
     total = sum(len(v) for v in results_by_platform.values())

@@ -2,7 +2,7 @@ import os
 import uuid
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -10,7 +10,7 @@ from scrapers.wolt import scrape_wolt
 from scrapers.bolt import scrape_bolt
 from scrapers.foodora import scrape_foodora
 from scrapers.glovo import scrape_glovo
-from services.email_service import send_completion_email, send_error_email
+from services.email_service import send_completion_email, send_error_email, build_excel
 
 load_dotenv()
 
@@ -65,7 +65,6 @@ def _detect_country(location: str):
     country = COUNTRY_ALIASES.get(key)
     if country:
         return COUNTRY_CITIES[country]
-    # Also match if it starts with the country name (e.g. "Czech Republic, Europe")
     for alias, canonical in COUNTRY_ALIASES.items():
         if key.startswith(alias):
             return COUNTRY_CITIES[canonical]
@@ -103,20 +102,20 @@ def _scrape_cities(scraper, cities, cuisine, job, platform_label):
     return all_results
 
 
-def run_scrape_job(job_id, platform, location, cuisine, email):
+def run_scrape_job(job_id, platforms, location, cuisine, email):
     job = jobs[job_id]
     try:
         job['status'] = 'running'
 
-        platforms_to_run = ['wolt', 'bolt'] if platform == 'both' else [platform]
         results_by_platform = {}
-
         cities = _detect_country(location)
 
-        for plat in platforms_to_run:
+        for plat in platforms:
             scraper = SCRAPERS.get(plat)
             if not scraper:
                 raise ValueError(f'Unknown platform: {plat}')
+
+            job['platforms_detail'][plat]['status'] = 'running'
 
             if cities and plat != 'foodora':
                 results = _scrape_cities(scraper, cities, cuisine, job, plat.capitalize())
@@ -125,11 +124,21 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
                 results = scraper(location, cuisine, job)
 
             results_by_platform[plat] = results
+            job['platforms_detail'][plat]['status'] = 'done'
+            job['platforms_detail'][plat]['scraped'] = len(results)
 
         total = sum(len(v) for v in results_by_platform.values())
         job['status'] = 'done'
         job['scraped'] = total
-        job['message'] = f'Done! Found {total} restaurants. Sending email...'
+        job['progress'] = 100
+        job['message'] = f'Done! Found {total} restaurants. Preparing file...'
+
+        # Build Excel and store for direct download
+        safe_loc = location.replace(', ', '_').replace(' ', '_')
+        platforms_str = '_'.join(p.capitalize() for p in results_by_platform if results_by_platform[p])
+        excel_filename = f'{safe_loc}_{platforms_str}.xlsx'
+        job['excel_bytes'] = build_excel(results_by_platform, location)
+        job['excel_filename'] = excel_filename
 
         try:
             send_completion_email(email, results_by_platform, location)
@@ -144,7 +153,7 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
         job['message'] = error_msg
         print(f'[Job {job_id}] Error: {error_msg}')
         try:
-            send_error_email(email, platform, location, error_msg)
+            send_error_email(email, '+'.join(platforms), location, error_msg)
         except Exception as mail_err:
             print(f'[Job {job_id}] Error email failed: {mail_err}')
 
@@ -152,37 +161,50 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
 @app.route('/api/scrape', methods=['POST'])
 def start_scrape():
     data = request.get_json()
-    platform = data.get('platform', 'wolt')
     location = data.get('location', '').strip()
     cuisine  = data.get('cuisine', '').strip()
     email    = data.get('email', '').strip()
+
+    # Accept either platforms[] array (new) or platform string (legacy)
+    platforms_raw = data.get('platforms')
+    if platforms_raw and isinstance(platforms_raw, list):
+        platforms = [p.strip() for p in platforms_raw if p.strip()]
+    else:
+        platform = data.get('platform', 'wolt')
+        platforms = ['wolt', 'bolt'] if platform == 'both' else [platform]
 
     if not location:
         return jsonify({'error': 'Location is required'}), 400
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400
-    if platform not in list(SCRAPERS.keys()) + ['both']:
-        return jsonify({'error': f'Unknown platform: {platform}'}), 400
+    if not platforms:
+        return jsonify({'error': 'Select at least one platform'}), 400
+    for p in platforms:
+        if p not in SCRAPERS:
+            return jsonify({'error': f'Unknown platform: {p}'}), 400
 
     job_id = str(uuid.uuid4())
     jobs[job_id] = {
-        'id': job_id,
-        'platform': platform,
-        'location': location,
-        'cuisine': cuisine,
-        'email': email,
-        'status': 'pending',
-        'message': 'Job queued',
-        'total': 0,
-        'scraped': 0,
-        'failed': 0,
-        'progress': 0,
-        'created_at': datetime.utcnow().isoformat(),
+        'id':               job_id,
+        'platforms':        platforms,
+        'platform':         '+'.join(platforms),  # legacy display field
+        'location':         location,
+        'cuisine':          cuisine,
+        'email':            email,
+        'status':           'pending',
+        'message':          'Job queued',
+        'total':            0,
+        'scraped':          0,
+        'failed':           0,
+        'progress':         0,
+        'platforms_detail': {p: {'status': 'pending', 'scraped': 0} for p in platforms},
+        'excel_filename':   None,
+        'created_at':       datetime.utcnow().isoformat(),
     }
 
     thread = threading.Thread(
         target=run_scrape_job,
-        args=(job_id, platform, location, cuisine, email),
+        args=(job_id, platforms, location, cuisine, email),
         daemon=True,
     )
     thread.start()
@@ -195,7 +217,26 @@ def get_job(job_id):
     job = jobs.get(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
-    return jsonify(job)
+    # Exclude raw bytes from JSON — expose only whether file is ready
+    safe = {k: v for k, v in job.items() if k != 'excel_bytes'}
+    safe['has_file'] = bool(job.get('excel_bytes'))
+    return jsonify(safe)
+
+
+@app.route('/api/jobs/<job_id>/download', methods=['GET'])
+def download_job(job_id):
+    job = jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+    excel_bytes = job.get('excel_bytes')
+    if not excel_bytes:
+        return jsonify({'error': 'File not ready yet'}), 404
+    filename = job.get('excel_filename', 'restaurants.xlsx')
+    return Response(
+        excel_bytes,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
 
 
 @app.route('/health', methods=['GET'])
