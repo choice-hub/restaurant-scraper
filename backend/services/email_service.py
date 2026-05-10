@@ -43,9 +43,10 @@ BOLT_COLUMNS = [
     ('Platform URL',          'platform_url'),
 ]
 
-# Foodora-specific columns (sitemap only: name + country + URL)
+# Foodora-specific columns (sitemap only: name + city + country + URL)
 FOODORA_COLUMNS = [
     ('Restaurant Name',   'name'),
+    ('City',              'city'),
     ('Country',           'country'),
     ('Platform URL',      'platform_url'),
 ]
