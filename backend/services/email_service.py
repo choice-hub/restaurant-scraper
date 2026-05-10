@@ -43,14 +43,23 @@ BOLT_COLUMNS = [
     ('Platform URL',          'platform_url'),
 ]
 
+# Foodora-specific columns (sitemap only: name + country + URL)
+FOODORA_COLUMNS = [
+    ('Restaurant Name',   'name'),
+    ('Country',           'country'),
+    ('Platform URL',      'platform_url'),
+]
+
 PLATFORM_COLUMNS = {
-    'wolt': WOLT_COLUMNS,
-    'bolt': BOLT_COLUMNS,
+    'wolt':    WOLT_COLUMNS,
+    'bolt':    BOLT_COLUMNS,
+    'foodora': FOODORA_COLUMNS,
 }
 
 HEADER_COLORS = {
-    'wolt': '009DE0',   # Wolt blue
-    'bolt': '34C759',   # Bolt green
+    'wolt':    '009DE0',   # Wolt blue
+    'bolt':    '34C759',   # Bolt green
+    'foodora': 'E2213D',   # Foodora red
 }
 
 

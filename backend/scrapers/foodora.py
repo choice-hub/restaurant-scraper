@@ -1,81 +1,162 @@
 """
-Foodora scraper using their public API.
-"""
-import time
-import requests
+Foodora scraper — sitemap-based, no browser required.
 
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (compatible; RestaurantScraper/1.0)',
-    'Accept': 'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
+Strategy:
+  Foodora sitemaps at /adventure-map/adventure-map-restaurant-N.xml are accessible
+  via Googlebot UA. Each URL encodes /restaurant/{code}/{slug}. We extract the name
+  from the slug (capitalize each word) and return records with name + platform_url.
+
+Markets: cz (foodora.cz), at (foodora.at), hu (foodora.hu), no (foodora.no), se (foodora.se)
+"""
+import logging
+import re
+import requests
+from xml.etree import ElementTree
+
+log = logging.getLogger(__name__)
+
+MARKETS = {
+    'cz': {'domain': 'www.foodora.cz', 'country': 'Czech Republic'},
+    'at': {'domain': 'www.foodora.at', 'country': 'Austria'},
+    'hu': {'domain': 'www.foodora.hu', 'country': 'Hungary'},
+    'no': {'domain': 'www.foodora.no', 'country': 'Norway'},
+    'se': {'domain': 'www.foodora.se', 'country': 'Sweden'},
 }
 
-GEOCODE_URL = 'https://nominatim.openstreetmap.org/search'
+LOCATION_TO_MARKET = {
+    # CZ
+    'czech republic': 'cz', 'czechia': 'cz', 'česká republika': 'cz', 'czech': 'cz', 'cz': 'cz',
+    'prague': 'cz', 'Praha': 'cz', 'praha': 'cz', 'brno': 'cz', 'ostrava': 'cz',
+    'plzeň': 'cz', 'plzen': 'cz', 'liberec': 'cz', 'olomouc': 'cz',
+    'české budějovice': 'cz', 'ceske budejovice': 'cz',
+    'hradec králové': 'cz', 'hradec kralove': 'cz',
+    'pardubice': 'cz', 'zlín': 'cz', 'zlin': 'cz',
+    'havířov': 'cz', 'havirov': 'cz', 'kladno': 'cz', 'most': 'cz',
+    'opava': 'cz', 'frýdek-místek': 'cz', 'frydek-mistek': 'cz',
+    # AT
+    'austria': 'at', 'österreich': 'at', 'at': 'at',
+    'vienna': 'at', 'wien': 'at', 'graz': 'at', 'linz': 'at',
+    'salzburg': 'at', 'innsbruck': 'at', 'klagenfurt': 'at',
+    # HU
+    'hungary': 'hu', 'magyarország': 'hu', 'hu': 'hu',
+    'budapest': 'hu', 'debrecen': 'hu', 'miskolc': 'hu',
+    'pécs': 'hu', 'pecs': 'hu', 'győr': 'hu', 'gyor': 'hu',
+    # NO
+    'norway': 'no', 'norge': 'no', 'no': 'no',
+    'oslo': 'no', 'bergen': 'no', 'trondheim': 'no', 'stavanger': 'no',
+    # SE
+    'sweden': 'se', 'sverige': 'se', 'se': 'se',
+    'stockholm': 'se', 'gothenburg': 'se', 'göteborg': 'se', 'goteborg': 'se',
+    'malmö': 'se', 'malmo': 'se', 'uppsala': 'se',
+}
+
+_GOOGLEBOT_UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+_RESTAURANT_RE = re.compile(r'/restaurant/([^/]+)/([^/?\s]+)')
+_NS = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
 
 
-def geocode_location(location: str) -> tuple[float, float]:
-    r = requests.get(
-        GEOCODE_URL,
-        params={'q': location, 'format': 'json', 'limit': 1},
-        headers={'User-Agent': 'RestaurantScraper/1.0'},
-        timeout=10
+def _detect_market(location: str) -> str:
+    key = location.strip().lower().split(',')[0].strip()
+    market = LOCATION_TO_MARKET.get(key)
+    if market:
+        return market
+    # Prefix match (e.g. "Czech Republic, Europe")
+    for alias, code in LOCATION_TO_MARKET.items():
+        if key.startswith(alias):
+            return code
+    raise ValueError(
+        f"Foodora is not available for '{location}'. "
+        f"Supported markets: Czech Republic, Austria, Hungary, Norway, Sweden."
     )
-    r.raise_for_status()
-    results = r.json()
-    if not results:
-        raise ValueError(f'Could not geocode: {location}')
-    return float(results[0]['lat']), float(results[0]['lon'])
+
+
+def _slug_to_name(slug: str, code: str) -> str:
+    """Convert a URL slug to a readable restaurant name."""
+    # Remove trailing market code suffix like '-0123' or '-ab12'
+    slug = re.sub(r'-[a-z0-9]{4}$', '', slug)
+    return ' '.join(word.capitalize() for word in slug.split('-'))
+
+
+def _fetch_sitemap_urls(domain: str) -> list[str]:
+    """Fetch all restaurant page URLs from Foodora sitemaps."""
+    urls = []
+    session = requests.Session()
+    session.headers['User-Agent'] = _GOOGLEBOT_UA
+
+    for index in range(20):  # up to 20 sitemap shards
+        sitemap_url = f"https://{domain}/adventure-map/adventure-map-restaurant-{index}.xml"
+        try:
+            r = session.get(sitemap_url, timeout=20)
+            if r.status_code == 404:
+                break  # no more shards
+            r.raise_for_status()
+            root = ElementTree.fromstring(r.content)
+            locs = [el.text for el in root.findall('sm:url/sm:loc', _NS) if el.text]
+            if not locs:
+                break
+            urls.extend(locs)
+            log.info(f"Foodora sitemap {index}: {len(locs)} URLs (total {len(urls)})")
+        except ElementTree.ParseError as e:
+            log.warning(f"Foodora sitemap {index} parse error: {e}")
+            break
+        except Exception as e:
+            log.warning(f"Foodora sitemap {index} fetch error: {e}")
+            break
+
+    return urls
 
 
 def scrape_foodora(location: str, cuisine: str, job: dict) -> list[dict]:
-    job['message'] = f'Geocoding "{location}" for Foodora...'
-    lat, lon = geocode_location(location)
-    job['message'] = 'Fetching Foodora restaurant list...'
+    """Synchronous entry point called by app.py."""
+    market_code = _detect_market(location)
+    market = MARKETS[market_code]
+    domain = market['domain']
+    country = market['country']
 
-    url = 'https://www.foodora.com/api/v2/restaurants'
-    params = {
-        'latitude': lat,
-        'longitude': lon,
-        'limit': 200,
-        'offset': 0,
-        'include': 'cuisines,address',
-    }
+    job['message'] = f"Foodora: fetching restaurant list for {country}..."
+    job['progress'] = 5
 
-    try:
-        r = requests.get(url, params=params, headers=HEADERS, timeout=20)
-        r.raise_for_status()
-        data = r.json()
-    except Exception as e:
-        raise RuntimeError(f'Foodora API error: {e}')
+    urls = _fetch_sitemap_urls(domain)
+    log.info(f"Foodora {market_code}: {len(urls)} sitemap URLs")
 
-    restaurants_raw = data.get('data', {}).get('items', [])
-    job['total'] = len(restaurants_raw)
-    job['message'] = f'Found {len(restaurants_raw)} Foodora restaurants. Processing...'
+    job['message'] = f"Foodora: parsing {len(urls)} restaurant URLs..."
+    job['progress'] = 60
 
-    results = []
-    for i, r_data in enumerate(restaurants_raw):
-        cuisine_tags = ', '.join(
-            c.get('name', '') for c in r_data.get('cuisines', [])
-        )
-        if cuisine and cuisine.lower() not in cuisine_tags.lower():
-            job['progress'] = int((i + 1) / len(restaurants_raw) * 100)
+    records = []
+    seen = set()
+    for url in urls:
+        m = _RESTAURANT_RE.search(url)
+        if not m:
             continue
-
-        address = r_data.get('address', {})
-        results.append({
-            'name': r_data.get('name', ''),
-            'city': address.get('city', location),
-            'address': address.get('street_name', '') + ' ' + address.get('street_number', ''),
-            'phone': r_data.get('phone', ''),
-            'website': r_data.get('website', ''),
-            'legal_id': r_data.get('id', ''),
-            'cuisine': cuisine_tags,
-            'wolt_url': f"https://www.foodora.com/restaurant/{r_data.get('code', '')}",
+        code, slug = m.group(1), m.group(2)
+        if code in seen:
+            continue
+        seen.add(code)
+        name = _slug_to_name(slug, market_code)
+        records.append({
+            'name':            name,
+            'brand_name':      '',
+            'phone':           '',
+            'website':         '',
+            'address':         '',
+            'city':            '',
+            'country':         country,
+            'cuisine':         '',
+            'rating':          '',
+            'review_count':    '',
+            'delivery_fee':    '',
+            'delivery_time':   '',
+            'merchant_name':   '',
+            'business_id':     '',
+            'legal_street':    '',
+            'legal_city':      '',
+            'legal_post_code': '',
+            'legal_country':   '',
+            'platform_url':    url,
         })
 
-        job['scraped'] = len(results)
-        job['progress'] = int((i + 1) / len(restaurants_raw) * 100)
-        job['message'] = f'Processed {i + 1}/{len(restaurants_raw)} Foodora restaurants...'
-        time.sleep(0.05)
-
-    return results
+    job['scraped'] = len(records)
+    job['total'] = len(records)
+    job['progress'] = 100
+    job['message'] = f"Foodora: done — {len(records)} restaurants for {country}."
+    return records

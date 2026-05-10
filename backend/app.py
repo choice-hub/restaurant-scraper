@@ -118,7 +118,7 @@ def run_scrape_job(job_id, platform, location, cuisine, email):
             if not scraper:
                 raise ValueError(f'Unknown platform: {plat}')
 
-            if cities:
+            if cities and plat != 'foodora':
                 results = _scrape_cities(scraper, cities, cuisine, job, plat.capitalize())
             else:
                 job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
