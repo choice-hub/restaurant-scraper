@@ -6,10 +6,11 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-from scrapers.wolt import scrape_wolt
-from scrapers.bolt import scrape_bolt
+from scrapers.wolt import scrape_wolt, fetch_country_cities
+from scrapers.bolt import scrape_bolt, inject_known_cities
 from scrapers.foodora import scrape_foodora
 from scrapers.glovo import scrape_glovo
+from scrapers.google_maps import scrape_google_maps
 from services.email_service import send_completion_email, send_error_email, build_excel
 
 load_dotenv()
@@ -20,54 +21,89 @@ CORS(app)
 jobs = {}
 
 SCRAPERS = {
-    'wolt':    scrape_wolt,
-    'bolt':    scrape_bolt,
-    'foodora': scrape_foodora,
-    'glovo':   scrape_glovo,
+    'wolt':         scrape_wolt,
+    'bolt':         scrape_bolt,
+    'foodora':      scrape_foodora,
+    'glovo':        scrape_glovo,
+    'google_maps':  scrape_google_maps,
 }
 
-# Country → list of cities to scrape (in order of size)
-COUNTRY_CITIES = {
-    'czech republic': [
-        'Prague, Czech Republic',
-        'Brno, Czech Republic',
-        'Ostrava, Czech Republic',
-        'Plzeň, Czech Republic',
-        'Liberec, Czech Republic',
-        'Olomouc, Czech Republic',
-        'České Budějovice, Czech Republic',
-        'Hradec Králové, Czech Republic',
-        'Pardubice, Czech Republic',
-        'Zlín, Czech Republic',
-        'Havířov, Czech Republic',
-        'Kladno, Czech Republic',
-        'Most, Czech Republic',
-        'Opava, Czech Republic',
-        'Frýdek-Místek, Czech Republic',
-    ],
-    'czechia': None,  # alias, resolved below
-}
-COUNTRY_CITIES['czechia'] = COUNTRY_CITIES['czech republic']
-
-# Aliases that map input text → canonical country key
+# Country name/alias → ISO alpha-3 code (covers every country Wolt operates in)
 COUNTRY_ALIASES = {
-    'czech republic': 'czech republic',
-    'czechia': 'czech republic',
-    'česká republika': 'czech republic',
-    'czech': 'czech republic',
-    'cz': 'czech republic',
+    # Czech Republic
+    'czech republic': 'CZE', 'czechia': 'CZE', 'česká republika': 'CZE', 'czech': 'CZE', 'cz': 'CZE',
+    # Austria
+    'austria': 'AUT', 'österreich': 'AUT', 'at': 'AUT',
+    # Poland
+    'poland': 'POL', 'polska': 'POL', 'pl': 'POL',
+    # Hungary
+    'hungary': 'HUN', 'magyarország': 'HUN', 'hu': 'HUN',
+    # Slovakia
+    'slovakia': 'SVK', 'slovensko': 'SVK', 'sk': 'SVK',
+    # Germany
+    'germany': 'DEU', 'deutschland': 'DEU', 'de': 'DEU',
+    # Finland
+    'finland': 'FIN', 'suomi': 'FIN', 'fi': 'FIN',
+    # Norway
+    'norway': 'NOR', 'norge': 'NOR', 'no': 'NOR',
+    # Sweden
+    'sweden': 'SWE', 'sverige': 'SWE', 'se': 'SWE',
+    # Denmark
+    'denmark': 'DNK', 'danmark': 'DNK', 'dk': 'DNK',
+    # Estonia
+    'estonia': 'EST', 'eesti': 'EST', 'ee': 'EST',
+    # Latvia
+    'latvia': 'LVA', 'latvija': 'LVA', 'lv': 'LVA',
+    # Lithuania
+    'lithuania': 'LTU', 'lietuva': 'LTU', 'lt': 'LTU',
+    # Israel
+    'israel': 'ISR', 'il': 'ISR',
+    # Greece
+    'greece': 'GRC', 'ελλάδα': 'GRC', 'gr': 'GRC',
+    # Romania
+    'romania': 'ROU', 'românia': 'ROU', 'ro': 'ROU',
+    # Serbia
+    'serbia': 'SRB', 'srbija': 'SRB', 'rs': 'SRB',
+    # Croatia
+    'croatia': 'HRV', 'hrvatska': 'HRV', 'hr': 'HRV',
+    # Bulgaria
+    'bulgaria': 'BGR', 'българия': 'BGR', 'bg': 'BGR',
+    # Switzerland
+    'switzerland': 'CHE', 'schweiz': 'CHE', 'ch': 'CHE',
+    # Japan
+    'japan': 'JPN', 'jp': 'JPN',
+    # Georgia
+    'georgia': 'GEO', 'საქართველო': 'GEO', 'ge': 'GEO',
+    # Azerbaijan
+    'azerbaijan': 'AZE', 'az': 'AZE',
+    # Kazakhstan
+    'kazakhstan': 'KAZ', 'kz': 'KAZ',
+}
+
+# alpha-3 → human-readable display name
+COUNTRY_DISPLAY = {
+    'CZE': 'Czech Republic', 'AUT': 'Austria',    'POL': 'Poland',
+    'HUN': 'Hungary',        'SVK': 'Slovakia',   'DEU': 'Germany',
+    'FIN': 'Finland',        'NOR': 'Norway',      'SWE': 'Sweden',
+    'DNK': 'Denmark',        'EST': 'Estonia',     'LVA': 'Latvia',
+    'LTU': 'Lithuania',      'ISR': 'Israel',      'GRC': 'Greece',
+    'ROU': 'Romania',        'SRB': 'Serbia',      'HRV': 'Croatia',
+    'BGR': 'Bulgaria',       'CHE': 'Switzerland', 'JPN': 'Japan',
+    'GEO': 'Georgia',        'AZE': 'Azerbaijan',  'KAZ': 'Kazakhstan',
 }
 
 
 def _detect_country(location: str):
-    """Return list of cities if location is a country we support, else None."""
-    key = location.strip().lower()
-    country = COUNTRY_ALIASES.get(key)
-    if country:
-        return COUNTRY_CITIES[country]
-    for alias, canonical in COUNTRY_ALIASES.items():
-        if key.startswith(alias):
-            return COUNTRY_CITIES[canonical]
+    """Return (alpha3, display_name) if location is a country name, else None."""
+    key = location.strip().lower().split(',')[0].strip()
+    alpha3 = COUNTRY_ALIASES.get(key)
+    if not alpha3:
+        for alias, code in COUNTRY_ALIASES.items():
+            if key.startswith(alias):
+                alpha3 = code
+                break
+    if alpha3:
+        return alpha3, COUNTRY_DISPLAY.get(alpha3, key.title())
     return None
 
 
@@ -108,7 +144,17 @@ def run_scrape_job(job_id, platforms, location, cuisine, email):
         job['status'] = 'running'
 
         results_by_platform = {}
-        cities = _detect_country(location)
+        country_info = _detect_country(location)
+
+        # For country-level scrapes, fetch all platform cities once up front
+        country_cities = None   # list of "CityName, Country" strings
+        if country_info:
+            alpha3, country_display = country_info
+            job['message'] = f'Fetching city list for {country_display}...'
+            raw_cities = fetch_country_cities(alpha3)   # [{name, slug, lat, lon}]
+            country_cities = [f"{c['name']}, {country_display}" for c in raw_cities]
+            # Pre-populate Bolt's coord cache so it never needs Nominatim
+            inject_known_cities(raw_cities)
 
         for plat in platforms:
             scraper = SCRAPERS.get(plat)
@@ -117,8 +163,9 @@ def run_scrape_job(job_id, platforms, location, cuisine, email):
 
             job['platforms_detail'][plat]['status'] = 'running'
 
-            if cities and plat != 'foodora':
-                results = _scrape_cities(scraper, cities, cuisine, job, plat.capitalize())
+            # Foodora and Glovo handle country-level scraping internally
+            if country_cities and plat not in ('foodora', 'glovo'):
+                results = _scrape_cities(scraper, country_cities, cuisine, job, plat.capitalize())
             else:
                 job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
                 results = scraper(location, cuisine, job)

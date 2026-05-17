@@ -86,6 +86,16 @@ KNOWN_CITIES = {
     "baku":                  (40.4093,  49.8671),
 }
 
+def inject_known_cities(cities: list[dict]) -> None:
+    """Pre-populate KNOWN_CITIES with coordinates from fetch_country_cities().
+    Prevents Nominatim geocoding for every city during a country-level scrape.
+    """
+    for c in cities:
+        key = c['name'].lower()
+        if key not in KNOWN_CITIES:
+            KNOWN_CITIES[key] = (c['lat'], c['lon'])
+
+
 BOLT_SCREEN_ID = 360003
 BOLT_API_URL = "https://deliveryuser.live.boltsvc.net/deliveryClient/public/getScreenContent"
 

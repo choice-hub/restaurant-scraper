@@ -54,6 +54,47 @@ _CITY_FALLBACKS = {
     'budapest': (47.4979937, 19.0403594, 'Budapest, Hungary', 'budapest', 'hun'),
 }
 
+# Cache for country city lists so we only hit /v1/cities once per country per process
+_country_cities_cache: dict = {}
+
+
+def fetch_country_cities(country_alpha3: str) -> list[dict]:
+    """Return all Wolt-served cities for a country as [{name, slug, lat, lon}].
+
+    Also pre-populates _geocode_cache so subsequent scrape_wolt() calls for these
+    cities never hit Nominatim.
+    """
+    alpha3 = country_alpha3.upper()
+    if alpha3 in _country_cities_cache:
+        return _country_cities_cache[alpha3]
+
+    r = requests.get(f'{BASE}/v1/cities', headers=HEADERS, timeout=15)
+    r.raise_for_status()
+
+    country_slug = _COUNTRY_CODE_MAP.get(
+        # alpha3 → alpha2 reverse lookup for _COUNTRY_CODE_MAP
+        next((k for k, v in _COUNTRY_CODE_MAP.items() if v == alpha3.lower()), ''),
+        alpha3.lower()
+    )
+
+    results = []
+    for c in r.json().get('results', []):
+        if c.get('country_code_alpha3', '').upper() != alpha3:
+            continue
+        lon, lat = c['location']['coordinates']
+        name  = c['name']
+        slug  = c.get('slug', name.lower().replace(' ', '-'))
+        entry = {'name': name, 'slug': slug, 'lat': lat, 'lon': lon}
+        results.append(entry)
+        # Pre-populate _CITY_FALLBACKS so geocode_location() finds cities by name
+        # without calling Nominatim (geocode_location checks first_word in _CITY_FALLBACKS)
+        fallback_key = name.lower()
+        if fallback_key not in _CITY_FALLBACKS:
+            _CITY_FALLBACKS[fallback_key] = (lat, lon, name, slug, country_slug)
+
+    _country_cities_cache[alpha3] = results
+    return results
+
 
 def geocode_location(location: str) -> tuple[float, float, str, str, str]:
     """Resolve a city/country string to lat/lon using OpenStreetMap Nominatim.
