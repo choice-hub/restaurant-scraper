@@ -597,7 +597,7 @@ def _parse_place(r: dict, business_type: str) -> dict:
         'category':            r.get('subtypes', '') or r.get('type', ''),
         'address':             r.get('full_address', '') or r.get('address', ''),
         'city':                r.get('city', ''),
-        'country':             r.get('country_code', '') or r.get('country', ''),
+        'country':             r.get('country', '') or r.get('country_code', ''),
         'latitude':            str(r.get('latitude', '')),
         'longitude':           str(r.get('longitude', '')),
         'phone':               r.get('phone', ''),

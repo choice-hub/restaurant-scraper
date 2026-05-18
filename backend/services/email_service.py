@@ -52,56 +52,20 @@ FOODORA_COLUMNS = [
     ('Platform URL',      'platform_url'),
 ]
 
-# Google Maps columns — per-platform delivery/reservation + derived booleans
+# Google Maps columns — clean, minimal set for ChoiceQR prospecting
 GOOGLE_MAPS_COLUMNS = [
-    ('Name',                         'name'),
-    ('Category / Cuisine',           'category'),
-    ('Address',                      'address'),
-    ('City',                         'city'),
-    ('Country',                      'country'),
-    ('Latitude',                     'latitude'),
-    ('Longitude',                    'longitude'),
-    ('Phone',                        'phone'),
-    ('Website',                      'website'),
-    ('Rating',                       'rating'),
-    ('Review Count',                 'reviews'),
-    ('Price Range',                  'price_range'),
-    ('Opening Hours',                'working_hours'),
-    ('Permanently Closed',           'permanently_closed'),
-    ('Temporarily Closed',           'temporarily_closed'),
-    # ── Delivery ──────────────────────────────────────────────
-    ('Delivery Companies',           'delivery_companies'),   # e.g. "Wolt, Bolt Food"
-    ('Has Delivery',                 'has_delivery'),
-    ('Delivery - Wolt',              'delivery_wolt'),
-    ('Delivery - Bolt Food',         'delivery_bolt_food'),
-    ('Delivery - Foodora',           'delivery_foodora'),
-    ('Delivery - Uber Eats',         'delivery_uber_eats'),
-    ('Delivery - Deliveroo',         'delivery_deliveroo'),
-    ('Delivery - Just Eat',          'delivery_just_eat'),
-    ('Delivery - Glovo',             'delivery_glovo'),
-    ('Delivery - Takeaway/Lieferd.', 'delivery_takeaway'),
-    ('Delivery - DoorDash',          'delivery_doordash'),
-    ('Delivery - Other',             'delivery_other'),
-    # ── Reservations ──────────────────────────────────────────
-    ('Reservation Companies',        'reservation_companies'), # e.g. "Quandoo, TheFork"
-    ('Has Reservation',              'has_reservation'),
-    ('Reservation - OpenTable',      'reservation_opentable'),
-    ('Reservation - Quandoo',        'reservation_quandoo'),
-    ('Reservation - TheFork',        'reservation_thefork'),
-    ('Reservation - Resy',           'reservation_resy'),
-    ('Reservation - Google Reserve', 'reservation_google'),
-    ('Reservation - ResDiary',       'reservation_resdiary'),
-    ('Reservation - Apetee',         'reservation_apetee'),
-    ('Reservation - Dish.co',        'reservation_dishco'),
-    ('Reservation - Bookatable',     'reservation_bookatable'),
-    ('Reservation - Forky',          'reservation_forky'),
-    ('Reservation - SevenRooms',     'reservation_sevenrooms'),
-    ('Reservation - Tock',           'reservation_tock'),
-    ('Reservation - Other/Direct',   'reservation_other'),
-    # ── Meta ──────────────────────────────────────────────────
-    ('Photo URL 1',                  'photo_url_1'),
-    ('Google Maps URL',              'google_maps_url'),
-    ('Place ID',                     'place_id'),
+    ('Name',                  'name'),
+    ('Address',               'address'),
+    ('City',                  'city'),
+    ('Country',               'country'),
+    ('Website',               'website'),
+    ('Review Count',          'reviews'),
+    ('Cuisine / Kitchen',     'category'),
+    ('Phone',                 'phone'),
+    # Only populated when the restaurant actually has delivery/reservation;
+    # empty cell means "none found".
+    ('Delivery Companies',    'delivery_companies'),    # e.g. "Wolt, Bolt Food"
+    ('Reservation Companies', 'reservation_companies'), # e.g. "Quandoo, TheFork"
 ]
 
 PLATFORM_COLUMNS = {
@@ -298,30 +262,29 @@ def build_google_maps_excel(results: list, location: str, stats: dict = None) ->
     # Sheet 1: All Results
     _write_data_sheet('All Results', results)
 
-    # Sheet 2: Has Delivery
-    delivery_rows = [r for r in results if r.get('delivery_platforms')]
+    # Sheet 2: Has Delivery — restaurants with at least one delivery company
+    delivery_rows = [r for r in results if r.get('delivery_companies')]
     _write_data_sheet(f'Has Delivery ({len(delivery_rows)})', delivery_rows)
 
-    # Sheet 3: Has Reservation
-    reservation_rows = [r for r in results if r.get('reservation_system')]
+    # Sheet 3: Has Reservation — restaurants with at least one reservation company
+    reservation_rows = [r for r in results if r.get('reservation_companies')]
     _write_data_sheet(f'Has Reservation ({len(reservation_rows)})', reservation_rows)
 
     # Sheet 4: Summary
     ws_sum = wb.create_sheet(title='Summary')
 
-    # Count by delivery platform
     from collections import Counter
     delivery_counts: Counter = Counter()
     for r in results:
-        for plat in r.get('delivery_platforms', '').split(', '):
-            if plat:
-                delivery_counts[plat] += 1
+        for plat in r.get('delivery_companies', '').split(', '):
+            if plat.strip():
+                delivery_counts[plat.strip()] += 1
 
     reservation_counts: Counter = Counter()
     for r in results:
-        res = r.get('reservation_system', '')
-        if res:
-            reservation_counts[res] += 1
+        for sys_ in r.get('reservation_companies', '').split(', '):
+            if sys_.strip():
+                reservation_counts[sys_.strip()] += 1
 
     city_counts: Counter = Counter(r.get('city', 'Unknown') for r in results)
 
@@ -340,12 +303,14 @@ def build_google_maps_excel(results: list, location: str, stats: dict = None) ->
     with_phone    = sum(1 for r in results if r.get('phone'))
     with_website  = sum(1 for r in results if r.get('website'))
 
+    def pct(n): return f'{round(n / total * 100)}%' if total else '0%'
+
     ws_sum.append(hrow(f'Google Maps — {location}'))
     ws_sum.append(['Total found',       total])
-    ws_sum.append(['With phone',        with_phone,   f'{round(with_phone/total*100) if total else 0}%'])
-    ws_sum.append(['With website',      with_website, f'{round(with_website/total*100) if total else 0}%'])
-    ws_sum.append(['With delivery',     len(delivery_rows), f'{round(len(delivery_rows)/total*100) if total else 0}%'])
-    ws_sum.append(['With reservation',  len(reservation_rows), f'{round(len(reservation_rows)/total*100) if total else 0}%'])
+    ws_sum.append(['With phone',        with_phone,              pct(with_phone)])
+    ws_sum.append(['With website',      with_website,            pct(with_website)])
+    ws_sum.append(['With delivery',     len(delivery_rows),      pct(len(delivery_rows))])
+    ws_sum.append(['With reservation',  len(reservation_rows),   pct(len(reservation_rows))])
     ws_sum.append([])
     ws_sum.append(hrow('Delivery platforms'))
     for plat, cnt in delivery_counts.most_common():
