@@ -292,10 +292,19 @@ function updateProgress(job, mode) {
   const pct = job.progress || 0;
 
   if (mode === 'googlemaps') {
-    // Update live count
     const scraped = job.scraped || 0;
     document.getElementById('gmCountNum').textContent = scraped.toLocaleString();
+    // Animate bar when waiting for API (pct is low but job is running)
+    const bar = document.getElementById('progressBar');
+    if (job.status === 'running' && pct < 15) {
+      bar.style.width = '100%';
+      bar.style.animation = 'gmPulse 1.5s ease-in-out infinite';
+    } else {
+      bar.style.animation = '';
+      bar.style.width = pct + '%';
+    }
   } else {
+    document.getElementById('progressBar').style.animation = '';
     updatePlatformRows(job.platforms_detail);
   }
 

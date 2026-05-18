@@ -218,8 +218,8 @@ def scrape_google_maps(
         query_term = BUSINESS_TYPE_QUERIES.get(btype, btype)
         query = f'{query_term} in {location}'
 
-        job['message'] = f'Google Maps: searching {query_term} ({idx}/{total_types})...'
-        job['progress'] = int((idx - 1) / total_types * 85)
+        job['message'] = f'Fetching {query_term} from Google Maps API... (this takes ~30s)'
+        job['progress'] = max(5, int((idx - 1) / total_types * 85))
         print(f'[Google Maps] Query: {query}')
 
         try:
