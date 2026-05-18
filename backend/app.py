@@ -1,3 +1,4 @@
+import gc
 import os
 import uuid
 import threading
@@ -107,11 +108,12 @@ def _detect_country(location: str):
     return None
 
 
-def _scrape_cities(scraper, cities, cuisine, job, platform_label):
+def _scrape_cities(scraper, cities, cuisine, job, platform_label, scraper_kwargs=None):
     """Scrape a list of cities with one scraper, dedup by name+address, return merged list."""
     seen = set()
     all_results = []
     total_cities = len(cities)
+    kwargs = scraper_kwargs or {}
 
     for idx, city in enumerate(cities, 1):
         city_name = city.split(',')[0].strip()
@@ -120,7 +122,7 @@ def _scrape_cities(scraper, cities, cuisine, job, platform_label):
 
         try:
             city_job = {'message': '', 'progress': 0, 'scraped': 0, 'total': 0}
-            results = scraper(city, cuisine, city_job)
+            results = scraper(city, cuisine, city_job, **kwargs)
 
             added = 0
             for r in results:
@@ -134,6 +136,8 @@ def _scrape_cities(scraper, cities, cuisine, job, platform_label):
             print(f'[{platform_label}] {city_name}: {len(results)} found, {added} new (total {len(all_results)})')
         except Exception as e:
             print(f'[{platform_label}] {city_name} failed: {e}')
+        finally:
+            gc.collect()  # help free per-city JSON objects between iterations
 
     return all_results
 
@@ -178,7 +182,11 @@ def run_scrape_job(job_id, platforms, location, cuisine, email):
 
             # Foodora and Glovo handle country-level scraping internally
             if country_cities and plat not in ('foodora', 'glovo'):
-                results = _scrape_cities(scraper, country_cities, cuisine, job, plat.capitalize())
+                # Wolt: skip phase-2 detail scraping (phone/merchant) for country batches
+                # to avoid OOM — each city's JSON response is 1-3MB, and 50 cities
+                # can exhaust Render's 512MB limit if pages are also fetched per venue.
+                extra = {'fetch_details': False} if plat == 'wolt' else {}
+                results = _scrape_cities(scraper, country_cities, cuisine, job, plat.capitalize(), scraper_kwargs=extra)
             else:
                 job['message'] = f'Searching {plat.capitalize()} restaurants in {location}...'
                 results = scraper(location, cuisine, job)

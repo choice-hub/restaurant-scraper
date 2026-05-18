@@ -3,6 +3,7 @@ Wolt scraper using Wolt's internal REST API.
 Phase 1: single listing call for all venues (fast).
 Phase 2: concurrent per-venue page scrapes for phone, merchant/legal data.
 """
+import gc
 import re
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -163,8 +164,12 @@ def _fetch_venue_detail(wolt_url: str) -> dict:
         return {}
 
 
-def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
-    """Main entry point. Phase 1: listing API. Phase 2: per-venue detail scrape."""
+def scrape_wolt(location: str, cuisine: str, job: dict, fetch_details: bool = True) -> list[dict]:
+    """Main entry point.
+    Phase 1: listing API (always runs).
+    Phase 2: per-venue page scrapes for phone/merchant data (skipped when fetch_details=False).
+    fetch_details=False is used for country-level batches to avoid OOM on large cities.
+    """
     job['message'] = f'Geocoding "{location}"...'
     lat, lon, formatted, city_slug, country_slug = geocode_location(location)
     city_name = formatted.split(',')[0].strip()
@@ -216,8 +221,19 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
                 'platform_url': wolt_url,
             })
 
+    # Free the large JSON response before phase 2 (or before returning)
+    del data, r
+    gc.collect()
+
     total = len(results)
     job['total'] = total
+
+    if not fetch_details:
+        job['scraped'] = total
+        job['progress'] = 100
+        job['message'] = f'Done! Found {total} restaurants near {formatted}.'
+        return results
+
     job['message'] = f'Found {total} restaurants. Fetching details (phone, merchant data)...'
     job['progress'] = 10
 
