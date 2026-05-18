@@ -659,9 +659,16 @@ def _parse_place(r: dict, business_type: str) -> dict:
     # their Wolt/Foodora page as their Google Maps website link).
     delivery_names = []
     for url in order_links + ([website_url] if website_url else []):
-        name = _name_from_url(url, _KNOWN_DELIVERY, own_domain)
-        if name and name not in delivery_names:
-            delivery_names.append(name)
+        url_lower = url.lower()
+        if 'google.com/maps/order' in url_lower or 'google.com/maps/reserve' in url_lower:
+            # Google ordering wrapper — extract real partner from URL params
+            partner = _google_reserve_partner(url)   # same param logic applies
+            if partner and partner not in delivery_names:
+                delivery_names.append(partner)
+        else:
+            name = _name_from_url(url, _KNOWN_DELIVERY, own_domain)
+            if name and name not in delivery_names:
+                delivery_names.append(name)
 
     result['delivery_companies'] = ', '.join(delivery_names)
     result['has_delivery'] = 'TRUE' if delivery_names else ''
