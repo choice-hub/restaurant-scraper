@@ -63,6 +63,10 @@ CITY_DISTRICTS = {
                    'Bratislava Petržalka', 'Bratislava Dúbravka', 'Bratislava Karlova Ves',
                    'Bratislava Lamač', 'Bratislava Rača', 'Bratislava Vajnory',
                    'Bratislava Devínska Nová Ves'],
+    # Estonia — Tallinn's 8 official linnaosad (city districts)
+    'tallinn': ['Tallinn Kesklinn', 'Tallinn Lasnamäe', 'Tallinn Mustamäe',
+                'Tallinn Põhja-Tallinn', 'Tallinn Haabersti', 'Tallinn Kristiine',
+                'Tallinn Nõmme', 'Tallinn Pirita'],
     # Romania
     'bucharest': ['Bucharest Sector 1', 'Bucharest Sector 2', 'Bucharest Sector 3',
                   'Bucharest Sector 4', 'Bucharest Sector 5', 'Bucharest Sector 6'],
