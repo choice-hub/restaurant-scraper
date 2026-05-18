@@ -239,25 +239,8 @@ def build_google_maps_excel(results: list, location: str, stats: dict = None) ->
             header_cells.append(c)
         ws.append(header_cells)
 
-        # Row highlighting: delivery=green, reservation=yellow, both=orange
-        del_fill  = PatternFill('solid', fgColor='E6F4EA')   # light green
-        res_fill  = PatternFill('solid', fgColor='FFFDE7')   # light yellow
-        both_fill = PatternFill('solid', fgColor='FFE0B2')   # light orange
-
         for r in rows:
-            has_del = r.get('has_delivery') == 'TRUE'
-            has_res = r.get('has_reservation') == 'TRUE'
-            row_fill = both_fill if (has_del and has_res) else del_fill if has_del else res_fill if has_res else None
-
-            if row_fill:
-                row_cells = []
-                for _, key in columns:
-                    c = WriteOnlyCell(ws, value=r.get(key, ''))
-                    c.fill = row_fill
-                    row_cells.append(c)
-                ws.append(row_cells)
-            else:
-                ws.append([r.get(key, '') for _, key in columns])
+            ws.append([r.get(key, '') for _, key in columns])
 
     # Sheet 1: All Results
     _write_data_sheet('All Results', results)

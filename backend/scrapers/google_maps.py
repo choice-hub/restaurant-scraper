@@ -502,10 +502,48 @@ def _extract_company_name(url: str, matchers: list) -> str:
 
 
 def _to_list(val) -> list:
+    """
+    Normalise an Outscraper field to a flat list of URL strings.
+    Handles: None, empty string, plain string, list of strings,
+    list of dicts ({"link":...} / {"url":...} / {"href":...}),
+    and comma-separated URL strings.
+    """
     if not val:
         return []
+    if isinstance(val, str):
+        # Comma-separated list of URLs
+        if ',' in val and val.startswith('http'):
+            return [u.strip() for u in val.split(',') if u.strip()]
+        return [val]
+    if isinstance(val, dict):
+        # Single dict — extract the URL
+        url = (val.get('link') or val.get('url') or val.get('href') or
+               val.get('value') or '')
+        if not url:
+            # Find first value that looks like a URL
+            for v in val.values():
+                if isinstance(v, str) and v.startswith('http'):
+                    url = v
+                    break
+        return [url] if url else []
     if isinstance(val, list):
-        return [str(v) for v in val if v]
+        result = []
+        for v in val:
+            if isinstance(v, dict):
+                url = (v.get('link') or v.get('url') or v.get('href') or
+                       v.get('value') or '')
+                if not url:
+                    for dv in v.values():
+                        if isinstance(dv, str) and dv.startswith('http'):
+                            url = dv
+                            break
+                if url:
+                    result.append(url)
+                else:
+                    result.append(str(v))  # fallback — str contains URL text
+            elif v:
+                result.append(str(v))
+        return result
     return [str(val)]
 
 
@@ -531,16 +569,24 @@ def _parse_place(r: dict, business_type: str) -> dict:
 
     result = {}
 
+    # Also check website URL — some restaurants set their Wolt/Foodora page
+    # as their Google Maps website, or their website redirects to a platform.
+    website_url = r.get('website', '') or ''
+
+    # All candidate delivery URLs: order_links first, then website as fallback
+    all_delivery_candidates = order_links + ([website_url] if website_url else [])
+
     # ── Per-platform delivery columns ─────────────────────────────────────────
     matched_delivery_urls = set()
     delivery_company_names = []
     for col, name, domains in _DELIVERY_MATCHERS:
         found = ''
-        for link in order_links:
+        for link in all_delivery_candidates:
             if any(d in link.lower() for d in domains):
                 found = link
                 matched_delivery_urls.add(link)
-                delivery_company_names.append(name)
+                if name not in delivery_company_names:
+                    delivery_company_names.append(name)
                 break
         result[col] = found
 
