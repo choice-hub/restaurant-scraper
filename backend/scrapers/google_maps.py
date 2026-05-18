@@ -17,30 +17,58 @@ BUSINESS_TYPE_QUERIES = {
 
 DEFAULT_BUSINESS_TYPES = ['restaurants', 'cafes']
 
-# Fields to request from Outscraper
+# Fields to request from Outscraper (no fields filter = get everything)
 OUTSCRAPER_FIELDS = (
-    'name,type,full_address,city,country_code,latitude,longitude,'
-    'phone,site,rating,reviews,range,working_hours,'
+    'name,type,subtypes,address,full_address,city,country_code,latitude,longitude,'
+    'phone,website,rating,reviews,range,working_hours,'
     'permanently_closed,temporarily_closed,'
-    'order_links,booking_appointment_link,photos,url,place_id'
+    'order_links,booking_appointment_link,reservation_links,photos,photo,url,place_id'
 )
 
-# Delivery platform domain matchers (checked in order)
+# ── Delivery platform matchers ────────────────────────────────────────────────
+# Each entry: (column_key, display_name, [domain_fragments])
 _DELIVERY_MATCHERS = [
-    ('delivery_uber_eats',  ['ubereats.com']),
-    ('delivery_doordash',   ['doordash.com']),
-    ('delivery_wolt',       ['wolt.com']),
-    ('delivery_bolt_food',  ['food.bolt.eu', 'bolt.eu/food', 'food.bolt']),
-    ('delivery_deliveroo',  ['deliveroo.com']),
-    ('delivery_just_eat',   ['just-eat.com', 'just-eat.co.uk', 'just-eat.']),
+    ('delivery_wolt',       'Wolt',        ['wolt.com']),
+    ('delivery_bolt_food',  'Bolt Food',   ['food.bolt.eu', 'bolt.eu/food', 'bolt.eu']),
+    ('delivery_uber_eats',  'Uber Eats',   ['ubereats.com']),
+    ('delivery_foodora',    'Foodora',     ['foodora.com', 'foodora.cz', 'foodora.at',
+                                            'foodora.se', 'foodora.no', 'foodora.fi']),
+    ('delivery_deliveroo',  'Deliveroo',   ['deliveroo.com']),
+    ('delivery_just_eat',   'Just Eat',    ['just-eat.com', 'just-eat.co.uk', 'justeat.com']),
+    ('delivery_doordash',   'DoorDash',    ['doordash.com']),
+    ('delivery_glovo',      'Glovo',       ['glovoapp.com', 'glovo.com']),
+    ('delivery_takeaway',   'Takeaway',    ['takeaway.com', 'lieferando.de', 'thuisbezorgd.nl',
+                                            'pyszne.pl', 'pizza.cz', 'damejidlo.cz']),
 ]
 
+# ── Reservation / booking platform matchers ───────────────────────────────────
 _RESERVATION_MATCHERS = [
-    ('reservation_opentable',   ['opentable.com']),
-    ('reservation_resy',        ['resy.com']),
-    ('reservation_sevenrooms',  ['sevenrooms.com']),
-    ('reservation_tock',        ['tock.com', 'exploretock.com']),
+    ('reservation_opentable',   'OpenTable',      ['opentable.com']),
+    ('reservation_resy',        'Resy',            ['resy.com']),
+    ('reservation_sevenrooms',  'SevenRooms',      ['sevenrooms.com']),
+    ('reservation_tock',        'Tock',            ['tock.com', 'exploretock.com']),
+    ('reservation_quandoo',     'Quandoo',         ['quandoo.com', 'quandoo.cz', 'quandoo.de',
+                                                    'quandoo.co.uk']),
+    ('reservation_thefork',     'TheFork',         ['thefork.com', 'lafourchette.com',
+                                                    'eltenedor.com', 'dimmi.com.au']),
+    ('reservation_bookatable',  'Bookatable',      ['bookatable.com', 'bookatable.co.uk']),
+    ('reservation_resdiary',    'ResDiary',        ['resdiary.com']),
+    ('reservation_apetee',      'Apetee',          ['apetee.com']),
+    ('reservation_dishco',      'Dish.co',         ['dish.co', 'dish.com']),
+    ('reservation_forky',       'Forky',           ['forky.cz']),
+    ('reservation_google',      'Google Reserve',  ['google.com/maps/reserve',
+                                                    'google.com/maps/contrib',
+                                                    'maps.google']),
 ]
+
+
+def _extract_company_name(url: str, matchers: list) -> str:
+    """Return the display name of the first matcher that matches the URL."""
+    url_lower = url.lower()
+    for _, name, domains in matchers:
+        if any(d in url_lower for d in domains):
+            return name
+    return ''
 
 
 def _to_list(val) -> list:
@@ -53,69 +81,97 @@ def _to_list(val) -> list:
 
 def _parse_place(r: dict, business_type: str) -> dict:
     order_links   = _to_list(r.get('order_links'))
-    booking_links = _to_list(r.get('booking_appointment_link'))
+    # Use booking_appointment_link + reservation_links for broadest coverage
+    booking_links = list(dict.fromkeys(
+        _to_list(r.get('booking_appointment_link')) +
+        _to_list(r.get('reservation_links'))
+    ))
+    # Clean Google redirect wrappers from reservation_links
+    cleaned_booking = []
+    for link in booking_links:
+        if link.startswith('/url?q='):
+            # Extract the real URL from Google's redirect
+            import urllib.parse
+            qs = urllib.parse.parse_qs(link[5:])  # strip /url?
+            real = qs.get('q', [link])[0]
+            cleaned_booking.append(real)
+        else:
+            cleaned_booking.append(link)
+    booking_links = list(dict.fromkeys(cleaned_booking))
 
-    # Per-platform delivery columns
     result = {}
+
+    # ── Per-platform delivery columns ─────────────────────────────────────────
     matched_delivery_urls = set()
-    for col, domains in _DELIVERY_MATCHERS:
+    delivery_company_names = []
+    for col, name, domains in _DELIVERY_MATCHERS:
         found = ''
         for link in order_links:
             if any(d in link.lower() for d in domains):
                 found = link
                 matched_delivery_urls.add(link)
+                delivery_company_names.append(name)
                 break
         result[col] = found
 
-    # Anything left over goes to delivery_other
     other_delivery = [l for l in order_links if l not in matched_delivery_urls]
     result['delivery_other'] = other_delivery[0] if other_delivery else ''
-    result['has_delivery'] = 'TRUE' if any(
-        result[c] for c in ['delivery_uber_eats', 'delivery_doordash', 'delivery_wolt',
-                             'delivery_bolt_food', 'delivery_deliveroo', 'delivery_just_eat',
-                             'delivery_other']
-    ) else ''
+    if other_delivery:
+        delivery_company_names.append('Other')
 
-    # Per-platform reservation columns
+    result['delivery_companies'] = ', '.join(delivery_company_names)
+    result['has_delivery'] = 'TRUE' if delivery_company_names else ''
+
+    # ── Per-platform reservation columns ──────────────────────────────────────
     matched_res_urls = set()
-    for col, domains in _RESERVATION_MATCHERS:
+    reservation_company_names = []
+    for col, name, domains in _RESERVATION_MATCHERS:
         found = ''
         for link in booking_links:
             if any(d in link.lower() for d in domains):
                 found = link
                 matched_res_urls.add(link)
+                reservation_company_names.append(name)
                 break
         result[col] = found
 
     other_res = [l for l in booking_links if l not in matched_res_urls]
+    # Filter out restaurant's own website from "other" if we have their website
+    own_site = (r.get('website') or '').lower().rstrip('/')
+    if own_site:
+        other_res = [l for l in other_res if own_site not in l.lower()]
     result['reservation_other'] = other_res[0] if other_res else ''
-    result['has_reservation'] = 'TRUE' if any(
-        result[c] for c in ['reservation_opentable', 'reservation_resy',
-                             'reservation_sevenrooms', 'reservation_tock', 'reservation_other']
-    ) else ''
+    if other_res:
+        reservation_company_names.append('Direct')
+    elif booking_links and not reservation_company_names:
+        # Has booking links but none matched — mark as Direct
+        reservation_company_names.append('Direct')
 
-    # Working hours: convert dict/list → readable string
+    result['reservation_companies'] = ', '.join(reservation_company_names)
+    result['has_reservation'] = 'TRUE' if (booking_links or reservation_company_names) else ''
+
+    # ── Working hours ──────────────────────────────────────────────────────────
     wh = r.get('working_hours', '')
     if isinstance(wh, dict):
-        wh = '; '.join(f"{k}: {v}" for k, v in wh.items())
+        wh = '; '.join(f"{k}: {', '.join(v) if isinstance(v, list) else v}" for k, v in wh.items())
     elif isinstance(wh, list):
         wh = '; '.join(str(h) for h in wh)
 
-    # First photo URL
+    # ── First photo URL ────────────────────────────────────────────────────────
     photos = _to_list(r.get('photos'))
-    photo1 = photos[0] if photos else ''
+    photo1 = photos[0] if photos else r.get('photo', '')
 
     result.update({
         'name':                r.get('name', ''),
         'business_type':       business_type,
-        'category':            r.get('type', ''),
+        'category':            r.get('subtypes', '') or r.get('type', ''),
         'address':             r.get('full_address', '') or r.get('address', ''),
         'city':                r.get('city', ''),
         'country':             r.get('country_code', '') or r.get('country', ''),
         'latitude':            str(r.get('latitude', '')),
         'longitude':           str(r.get('longitude', '')),
         'phone':               r.get('phone', ''),
-        'website':             r.get('site', ''),
+        'website':             r.get('website', ''),   # FIXED: was 'site'
         'rating':              str(r.get('rating', '')),
         'reviews':             str(r.get('reviews', '')),
         'price_range':         r.get('range', ''),
@@ -185,7 +241,6 @@ def scrape_google_maps(
                 if pid not in all_records:
                     all_records[pid] = _parse_place(place, query_term)
                 else:
-                    # Merge business type label
                     existing = all_records[pid]['business_type']
                     if query_term not in existing:
                         all_records[pid]['business_type'] = f'{existing}, {query_term}'
