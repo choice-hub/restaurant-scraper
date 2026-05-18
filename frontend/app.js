@@ -122,25 +122,23 @@ function updateGMEstimate() {
   const location = locMode === 'city'
     ? document.getElementById('gmCity').value.trim()
     : document.getElementById('gmCountry').value.trim();
-  const numTypes = document.querySelectorAll('input[name="gmType"]:checked').length;
 
-  if (!location || numTypes === 0) {
+  if (!location) {
     document.getElementById('gmEstimate').style.display = 'none';
     return;
   }
 
-  const queries   = getQueryCount(location, numTypes);
-  const avgPerQ   = 200;  // conservative average records per query
-  const minRec    = queries * 80;
-  const maxRec    = queries * 400;
-  const minCost   = (minRec * 0.003).toFixed(2);
-  const maxCost   = (maxRec * 0.003).toFixed(2);
-  const minMins   = Math.ceil(queries * 30 / 60);
-  const maxMins   = Math.ceil(queries * 45 / 60);
+  const queries  = getQueryCount(location, 1);  // always 1 type: restaurants
+  const minRec   = queries * 80;
+  const maxRec   = queries * 400;
+  const minCost  = (minRec * 0.003).toFixed(2);
+  const maxCost  = (maxRec * 0.003).toFixed(2);
+  const mins     = Math.ceil(queries * 35 / 60);
+  const timeStr  = mins < 2 ? '~1 min' : `~${mins} min`;
 
-  document.getElementById('estTime').textContent    = minMins === maxMins ? `~${minMins} min` : `~${minMins}–${maxMins} min`;
+  document.getElementById('estTime').textContent    = timeStr;
   document.getElementById('estCost').textContent    = `~$${minCost}–$${maxCost}`;
-  document.getElementById('estQueries').textContent = `${queries} (${numTypes} type${numTypes > 1 ? 's' : ''} × ${queries / numTypes} area${queries / numTypes > 1 ? 's' : ''})`;
+  document.getElementById('estQueries').textContent = `${queries} area${queries > 1 ? 's' : ''}`;
   document.getElementById('gmEstimate').style.display = '';
 }
 
@@ -288,8 +286,7 @@ document.getElementById('btnGMScrape').addEventListener('click', async () => {
   const email = document.getElementById('gmEmail').value.trim();
   if (!email || !email.includes('@')) return alert('Please enter a valid email address.');
 
-  const businessTypes = [...document.querySelectorAll('input[name="gmType"]:checked')].map(el => el.value);
-  if (!businessTypes.length) return alert('Please select at least one business type.');
+  const businessTypes = ['restaurants'];
 
   const gm_params = {
     business_types:  businessTypes,

@@ -116,37 +116,10 @@
         </div>
       </section>
 
-      <!-- Step 2: Business types -->
-      <section class="step">
-        <h2><span class="step-num">2</span> Business Types</h2>
-        <div class="biz-type-grid">
-          <label class="biz-type-opt">
-            <input type="checkbox" name="gmType" value="restaurants" checked />
-            <span>🍽️ Restaurants</span>
-          </label>
-          <label class="biz-type-opt">
-            <input type="checkbox" name="gmType" value="cafes" checked />
-            <span>☕ Cafes &amp; Coffee Shops</span>
-          </label>
-          <label class="biz-type-opt">
-            <input type="checkbox" name="gmType" value="bars" checked />
-            <span>🍺 Bars &amp; Pubs</span>
-          </label>
-          <label class="biz-type-opt">
-            <input type="checkbox" name="gmType" value="bakeries" checked />
-            <span>🥐 Bakeries</span>
-          </label>
-          <label class="biz-type-opt">
-            <input type="checkbox" name="gmType" value="fast_food" checked />
-            <span>🍔 Fast Food</span>
-          </label>
-        </div>
-      </section>
-
-      <!-- Step 3: Filters (collapsible) -->
+      <!-- Step 2: Filters (collapsible) -->
       <section class="step">
         <h2 class="collapsible-header" id="filtersToggle" onclick="toggleFilters()">
-          <span class="step-num">3</span> Filters <span class="optional-badge">Optional</span>
+          <span class="step-num">2</span> Filters <span class="optional-badge">Optional</span>
           <span class="collapse-arrow" id="filtersArrow">▼</span>
         </h2>
         <div class="filters-body" id="filtersBody" style="display:none">
@@ -173,9 +146,12 @@
         </div>
       </section>
 
-      <!-- Step 4: Email -->
+      <!-- Hidden: always scrape restaurants only -->
+      <input type="hidden" name="gmType" value="restaurants" id="gmTypeHidden" />
+
+      <!-- Step 3: Email -->
       <section class="step">
-        <h2><span class="step-num">4</span> Your Email</h2>
+        <h2><span class="step-num">3</span> Your Email</h2>
         <p class="hint">We'll email you the Excel file when scraping is done.</p>
         <div class="input-group">
           <span class="input-icon">✉️</span>
