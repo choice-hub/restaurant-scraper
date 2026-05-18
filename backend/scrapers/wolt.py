@@ -225,7 +225,7 @@ def scrape_wolt(location: str, cuisine: str, job: dict) -> list[dict]:
     index_map = {r['platform_url']: i for i, r in enumerate(results)}
     completed = 0
 
-    with ThreadPoolExecutor(max_workers=15) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(_fetch_venue_detail, r['platform_url']): r['platform_url'] for r in results}
         for future in as_completed(futures):
             wolt_url = futures[future]

@@ -9,6 +9,7 @@ from email import encoders
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import WriteOnlyCell
 
 # Wolt-specific columns
 WOLT_COLUMNS = [
@@ -79,38 +80,42 @@ HEADER_COLORS = {
 
 
 def _add_sheet(wb, platform: str, location: str, restaurants: list):
-    """Add one sheet to workbook for a given platform."""
+    """Add one sheet to workbook for a given platform (write-only: no cells held in RAM)."""
     columns = PLATFORM_COLUMNS.get(platform, WOLT_COLUMNS)
     color   = HEADER_COLORS.get(platform, '1A73E8')
 
     sheet_title = f'{platform.capitalize()} - {location}'[:31]
     ws = wb.create_sheet(title=sheet_title)
 
+    # Pre-compute column widths from raw data before writing any rows
+    # (must be set before first ws.append() in write-only mode)
+    col_widths = [len(header) for header, _ in columns]
+    for r in restaurants[:200]:
+        for ci, (_, key) in enumerate(columns):
+            val_len = len(str(r.get(key, '') or ''))
+            if val_len > col_widths[ci]:
+                col_widths[ci] = val_len
+    for ci, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(ci)].width = min(width + 4, 50)
+
     hfont  = Font(bold=True, color='FFFFFF')
     hfill  = PatternFill('solid', fgColor=color)
     halign = Alignment(horizontal='center', vertical='center', wrap_text=False)
 
-    for ci, (header, _) in enumerate(columns, start=1):
-        cell = ws.cell(row=1, column=ci, value=header)
+    header_cells = []
+    for header, _ in columns:
+        cell = WriteOnlyCell(ws, value=header)
         cell.font, cell.fill, cell.alignment = hfont, hfill, halign
+        header_cells.append(cell)
+    ws.append(header_cells)
 
-    for ri, r in enumerate(restaurants, start=2):
-        for ci, (_, key) in enumerate(columns, start=1):
-            ws.cell(row=ri, column=ci, value=r.get(key, ''))
-
-    for ci in range(1, len(columns) + 1):
-        col_letter = get_column_letter(ci)
-        max_len = max(
-            len(str(ws.cell(row=r, column=ci).value or ''))
-            for r in range(1, min(len(restaurants) + 2, 200))
-        )
-        ws.column_dimensions[col_letter].width = min(max_len + 4, 50)
+    for r in restaurants:
+        ws.append([r.get(key, '') for _, key in columns])
 
 
 def build_excel(results_by_platform: dict, location: str) -> bytes:
-    """Build an Excel file with one sheet per platform."""
-    wb = openpyxl.Workbook()
-    wb.remove(wb.active)  # remove default empty sheet
+    """Build an Excel file with one sheet per platform (streaming write, low memory)."""
+    wb = openpyxl.Workbook(write_only=True)
 
     for platform, restaurants in results_by_platform.items():
         if restaurants:

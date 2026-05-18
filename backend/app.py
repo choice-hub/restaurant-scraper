@@ -138,6 +138,19 @@ def _scrape_cities(scraper, cities, cuisine, job, platform_label):
     return all_results
 
 
+def _cleanup_old_jobs():
+    """Remove completed/failed jobs older than 30 minutes to free excel_bytes from RAM."""
+    cutoff = 30 * 60  # seconds
+    now = datetime.utcnow()
+    stale = [
+        jid for jid, j in list(jobs.items())
+        if j.get('status') in ('done', 'error')
+        and (now - datetime.fromisoformat(j['created_at'])).total_seconds() > cutoff
+    ]
+    for jid in stale:
+        del jobs[jid]
+
+
 def run_scrape_job(job_id, platforms, location, cuisine, email):
     job = jobs[job_id]
     try:
@@ -229,6 +242,8 @@ def start_scrape():
     for p in platforms:
         if p not in SCRAPERS:
             return jsonify({'error': f'Unknown platform: {p}'}), 400
+
+    _cleanup_old_jobs()
 
     job_id = str(uuid.uuid4())
     jobs[job_id] = {
