@@ -17,6 +17,76 @@ BUSINESS_TYPE_QUERIES = {
 
 DEFAULT_BUSINESS_TYPES = ['restaurants', 'cafes']
 
+# ── City district expansion ───────────────────────────────────────────────────
+# For large cities, Google Maps caps at ~500 results per query.
+# We split into districts/boroughs so each sub-query returns a fresh batch.
+# All results are deduplicated by place_id afterward.
+CITY_DISTRICTS = {
+    # Czech Republic
+    'prague':  [f'Praha {i}' for i in range(1, 23)],
+    'praha':   [f'Praha {i}' for i in range(1, 23)],
+    'brno':    ['Brno-střed', 'Brno-sever', 'Brno-jih', 'Brno-východ', 'Brno-západ',
+                'Brno-Komín', 'Brno-Židenice', 'Brno-Líšeň', 'Brno-Bystrc',
+                'Brno-Bosonohy', 'Brno-Tuřany', 'Brno-Kohoutovice'],
+    'ostrava': ['Ostrava-jih', 'Ostrava-město', 'Mariánské Hory', 'Poruba',
+                'Hrabůvka', 'Zábřeh', 'Vítkovice', 'Slezská Ostrava'],
+    'plzen':   ['Plzeň 1', 'Plzeň 2', 'Plzeň 3', 'Plzeň 4',
+                'Plzeň 5', 'Plzeň 6', 'Plzeň 7', 'Plzeň 8', 'Plzeň 9', 'Plzeň 10'],
+    # Poland
+    'warsaw':  ['Warsaw Śródmieście', 'Warsaw Mokotów', 'Warsaw Praga-Południe',
+                'Warsaw Wola', 'Warsaw Ursynów', 'Warsaw Bielany', 'Warsaw Targówek',
+                'Warsaw Wilanów', 'Warsaw Białołęka', 'Warsaw Ochota',
+                'Warsaw Bemowo', 'Warsaw Żoliborz', 'Warsaw Włochy', 'Warsaw Wesoła'],
+    'warsaw':  ['Śródmieście Warsaw', 'Mokotów Warsaw', 'Praga-Południe Warsaw',
+                'Wola Warsaw', 'Ursynów Warsaw', 'Bielany Warsaw', 'Żoliborz Warsaw'],
+    'krakow':  ['Kraków Stare Miasto', 'Kraków Kazimierz', 'Kraków Podgórze',
+                'Kraków Krowodrza', 'Kraków Nowa Huta', 'Kraków Bronowice',
+                'Kraków Dębniki', 'Kraków Grzegórzki', 'Kraków Prądnik Biały'],
+    'cracow':  ['Kraków Stare Miasto', 'Kraków Kazimierz', 'Kraków Podgórze',
+                'Kraków Krowodrza', 'Kraków Nowa Huta'],
+    # Germany
+    'berlin':  ['Berlin Mitte', 'Berlin Prenzlauer Berg', 'Berlin Kreuzberg',
+                'Berlin Friedrichshain', 'Berlin Neukölln', 'Berlin Schöneberg',
+                'Berlin Charlottenburg', 'Berlin Wedding', 'Berlin Spandau',
+                'Berlin Steglitz', 'Berlin Tempelhof', 'Berlin Lichtenberg',
+                'Berlin Pankow', 'Berlin Treptow', 'Berlin Köpenick',
+                'Berlin Reinickendorf', 'Berlin Zehlendorf', 'Berlin Wilmersdorf'],
+    # Austria
+    'vienna':  [f'Vienna {d}' for d in [
+                'Innere Stadt', 'Leopoldstadt', 'Landstraße', 'Wieden', 'Margareten',
+                'Mariahilf', 'Neubau', 'Josefstadt', 'Alsergrund', 'Favoriten',
+                'Simmering', 'Meidling', 'Hietzing', 'Penzing', 'Rudolfsheim',
+                'Ottakring', 'Hernals', 'Währing', 'Döbling', 'Brigittenau',
+                'Floridsdorf', 'Donaustadt', 'Liesing']],
+    # Hungary
+    'budapest': [f'Budapest {d}. district' for d in range(1, 24)],
+    # Slovakia
+    'bratislava': ['Bratislava Staré Mesto', 'Bratislava Ružinov', 'Bratislava Nové Mesto',
+                   'Bratislava Petržalka', 'Bratislava Dúbravka', 'Bratislava Karlova Ves',
+                   'Bratislava Lamač', 'Bratislava Rača', 'Bratislava Vajnory',
+                   'Bratislava Devínska Nová Ves'],
+    # Romania
+    'bucharest': ['Bucharest Sector 1', 'Bucharest Sector 2', 'Bucharest Sector 3',
+                  'Bucharest Sector 4', 'Bucharest Sector 5', 'Bucharest Sector 6'],
+    # Greece
+    'athens':  ['Athens Syntagma', 'Athens Monastiraki', 'Athens Exarcheia',
+                'Athens Kolonaki', 'Athens Psirri', 'Athens Koukaki', 'Athens Gazi',
+                'Athens Glyfada', 'Athens Piraeus', 'Athens Kifisia',
+                'Athens Halandri', 'Athens Marousi'],
+}
+
+
+def _get_sub_queries(location: str, query_term: str) -> list[str]:
+    """
+    For large cities return one query per district.
+    For small cities / single districts return a single query.
+    """
+    key = location.strip().lower().split(',')[0].strip()
+    districts = CITY_DISTRICTS.get(key)
+    if districts:
+        return [f'{query_term} in {d}' for d in districts]
+    return [f'{query_term} in {location}']
+
 # Fields to request from Outscraper (no fields filter = get everything)
 OUTSCRAPER_FIELDS = (
     'name,type,subtypes,address,full_address,city,country_code,latitude,longitude,'
@@ -216,37 +286,58 @@ def scrape_google_maps(
 
     for idx, btype in enumerate(types_to_scrape, 1):
         query_term = BUSINESS_TYPE_QUERIES.get(btype, btype)
-        query = f'{query_term} in {location}'
+        sub_queries = _get_sub_queries(location, query_term)
+        total_sub = len(sub_queries)
+        is_district_mode = total_sub > 1
 
-        job['message'] = f'Fetching {query_term} from Google Maps API... (this takes ~30s)'
-        job['progress'] = max(5, int((idx - 1) / total_types * 85))
-        print(f'[Google Maps] Query: {query}')
+        print(f'[Google Maps] {btype}: {total_sub} sub-queries for "{location}"')
 
-        try:
-            raw = client.google_maps_search(
-                [query],
-                language='en',
-                limit=500,
-                drop_duplicates=True,
-                fields=OUTSCRAPER_FIELDS,
-            )
-            # API returns flat list of dicts (not list-of-lists)
-            places = raw if isinstance(raw, list) and raw and isinstance(raw[0], dict) else (raw[0] if raw else [])
-            print(f'[Google Maps] {btype}: {len(places)} raw results')
+        for q_idx, query in enumerate(sub_queries, 1):
+            pct_base  = int((idx - 1) / total_types * 85)
+            pct_inner = int((q_idx - 1) / total_sub / total_types * 85)
+            job['progress'] = max(5, pct_base + pct_inner)
 
-            for place in places:
-                pid = place.get('place_id', '')
-                if not pid:
-                    continue
-                if pid not in all_records:
-                    all_records[pid] = _parse_place(place, query_term)
-                else:
-                    existing = all_records[pid]['business_type']
-                    if query_term not in existing:
-                        all_records[pid]['business_type'] = f'{existing}, {query_term}'
+            if is_district_mode:
+                district = query.split(' in ', 1)[-1]
+                job['message'] = (
+                    f'{query_term.capitalize()}: district {q_idx}/{total_sub} — {district}'
+                    f' ({len(all_records)} found so far)'
+                )
+            else:
+                job['message'] = f'Fetching {query_term} from Google Maps... (~30s)'
 
-        except Exception as e:
-            print(f'[Google Maps] {btype} query failed: {e}')
+            print(f'[Google Maps] Query: {query}')
+
+            try:
+                raw = client.google_maps_search(
+                    [query],
+                    language='en',
+                    limit=500,
+                    drop_duplicates=True,
+                    fields=OUTSCRAPER_FIELDS,
+                )
+                # API returns flat list of dicts (not list-of-lists)
+                places = raw if isinstance(raw, list) and raw and isinstance(raw[0], dict) else (raw[0] if raw else [])
+                print(f'[Google Maps] {query}: {len(places)} raw results')
+
+                added = 0
+                for place in places:
+                    pid = place.get('place_id', '')
+                    if not pid:
+                        continue
+                    if pid not in all_records:
+                        all_records[pid] = _parse_place(place, query_term)
+                        added += 1
+                    else:
+                        existing = all_records[pid]['business_type']
+                        if query_term not in existing:
+                            all_records[pid]['business_type'] = f'{existing}, {query_term}'
+
+                job['scraped'] = len(all_records)
+                print(f'[Google Maps] +{added} new (total {len(all_records)})')
+
+            except Exception as e:
+                print(f'[Google Maps] query failed: {query} — {e}')
 
     results = list(all_records.values())
 
