@@ -67,6 +67,36 @@ CITY_DISTRICTS = {
     'tallinn': ['Tallinn Kesklinn', 'Tallinn Lasnamäe', 'Tallinn Mustamäe',
                 'Tallinn Põhja-Tallinn', 'Tallinn Haabersti', 'Tallinn Kristiine',
                 'Tallinn Nõmme', 'Tallinn Pirita'],
+    # Latvia — Riga neighbourhoods
+    'riga':    ['Riga Centrs', 'Riga Āgenskalns', 'Riga Imanta', 'Riga Purvciems',
+                'Riga Pļavnieki', 'Riga Ziepniekkalns', 'Riga Sarkandaugava',
+                'Riga Teika', 'Riga Jugla', 'Riga Bolderāja', 'Riga Mežaparks',
+                'Riga Zolitūde'],
+    # Lithuania — Vilnius elderships
+    'vilnius': ['Vilnius Senamiestis', 'Vilnius Šnipiškės', 'Vilnius Žirmūnai',
+                'Vilnius Antakalnis', 'Vilnius Pašilaičiai', 'Vilnius Lazdynai',
+                'Vilnius Karoliniškės', 'Vilnius Naujamiestis', 'Vilnius Naujininkai',
+                'Vilnius Paneriai', 'Vilnius Fabijoniškės', 'Vilnius Justiniškės'],
+    # Ukraine — major cities split by raion
+    'kyiv':    ['Kyiv Pecherskyi', 'Kyiv Shevchenkivskyi', 'Kyiv Podilskyi',
+                'Kyiv Obolonskyi', 'Kyiv Holosiivskyi', 'Kyiv Solomianskyi',
+                'Kyiv Sviatoshynskyi', 'Kyiv Darnytskyyi', 'Kyiv Desnianskyi',
+                'Kyiv Dniprovskyi'],
+    'lviv':    ['Lviv Halytskyi', 'Lviv Lychakivskyi', 'Lviv Frankivskyi',
+                'Lviv Zaliznychnyi', 'Lviv Sykhivskyi', 'Lviv Shevchenkivskyi'],
+    'kharkiv': ['Kharkiv Shevchenkivskyi', 'Kharkiv Kyivskyi', 'Kharkiv Novobavarskyi',
+                'Kharkiv Nemyshlianskyi', 'Kharkiv Kholodnohirskyi', 'Kharkiv Industrialnyi',
+                'Kharkiv Osnovianskyi', 'Kharkiv Slobidskyi', 'Kharkiv Saltivskyi'],
+    'odessa':  ['Odessa Prymorskyi', 'Odessa Kyivskyi', 'Odessa Malinovskyi',
+                'Odessa Suvorovskyi'],
+    # Portugal
+    'lisbon':  ['Lisbon Baixa', 'Lisbon Alfama', 'Lisbon Bairro Alto', 'Lisbon Belém',
+                'Lisbon Mouraria', 'Lisbon Alvalade', 'Lisbon Lumiar', 'Lisbon Areeiro',
+                'Lisbon Benfica', 'Lisbon Alcântara', 'Lisbon Parque das Nações',
+                'Lisbon Campo de Ourique'],
+    'porto':   ['Porto Centro', 'Porto Cedofeita', 'Porto Bonfim', 'Porto Foz do Douro',
+                'Porto Paranhos', 'Porto Ramalde', 'Porto Campanhã', 'Porto Lordelo do Ouro',
+                'Porto Massarelos', 'Porto Aldoar'],
     # Romania
     'bucharest': ['Bucharest Sector 1', 'Bucharest Sector 2', 'Bucharest Sector 3',
                   'Bucharest Sector 4', 'Bucharest Sector 5', 'Bucharest Sector 6'],
@@ -402,14 +432,18 @@ def _get_sub_queries(location: str, query_term: str) -> list[str]:
 
 def _get_location_queries(location: str, query_term: str) -> list[str]:
     """
-    If location matches a known country, return one query per major city.
-    Otherwise fall back to district-level splitting for large cities,
-    or a single query for everything else.
+    If location matches a known country, iterate each major city and
+    apply district splitting where available (so Prague → 22 queries,
+    Tallinn → 8, etc.).  Otherwise fall back to district-level splitting
+    for large cities, or a single query for everything else.
     """
     key = location.strip().lower().split(',')[0].strip()
     cities = COUNTRY_CITIES.get(key)
     if cities:
-        return [f'{query_term} in {city}' for city in cities]
+        queries = []
+        for city in cities:
+            queries.extend(_get_sub_queries(city, query_term))
+        return queries
     return _get_sub_queries(location, query_term)
 
 

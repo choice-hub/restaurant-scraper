@@ -32,32 +32,17 @@ function switchMode(mode) {
   document.getElementById('tabGoogleMaps').classList.toggle('active', mode === 'googlemaps');
 }
 
-// ── Country dropdown (Google Maps) ────────────────────────────────────────────
+// ── Country dropdown (Google Maps) — restricted to supported markets ──────────
 const COUNTRIES = [
-  ['Afghanistan','AF'],['Albania','AL'],['Algeria','DZ'],['Argentina','AR'],
-  ['Armenia','AM'],['Australia','AU'],['Austria','AT'],['Azerbaijan','AZ'],
-  ['Bahrain','BH'],['Bangladesh','BD'],['Belarus','BY'],['Belgium','BE'],
-  ['Bolivia','BO'],['Bosnia and Herzegovina','BA'],['Brazil','BR'],['Bulgaria','BG'],
-  ['Cambodia','KH'],['Canada','CA'],['Chile','CL'],['China','CN'],
-  ['Colombia','CO'],['Croatia','HR'],['Cyprus','CY'],['Czech Republic','CZ'],
-  ['Denmark','DK'],['Ecuador','EC'],['Egypt','EG'],['Estonia','EE'],
-  ['Ethiopia','ET'],['Finland','FI'],['France','FR'],['Georgia','GE'],
-  ['Germany','DE'],['Ghana','GH'],['Greece','GR'],['Guatemala','GT'],
-  ['Honduras','HN'],['Hungary','HU'],['Iceland','IS'],['India','IN'],
-  ['Indonesia','ID'],['Ireland','IE'],['Israel','IL'],['Italy','IT'],
-  ['Japan','JP'],['Jordan','JO'],['Kazakhstan','KZ'],['Kenya','KE'],
-  ['Kosovo','XK'],['Kuwait','KW'],['Latvia','LV'],['Lebanon','LB'],
-  ['Lithuania','LT'],['Luxembourg','LU'],['Malaysia','MY'],['Malta','MT'],
-  ['Mexico','MX'],['Moldova','MD'],['Morocco','MA'],['Netherlands','NL'],
-  ['New Zealand','NZ'],['Nigeria','NG'],['North Macedonia','MK'],['Norway','NO'],
-  ['Pakistan','PK'],['Paraguay','PY'],['Peru','PE'],['Philippines','PH'],
-  ['Poland','PL'],['Portugal','PT'],['Qatar','QA'],['Romania','RO'],
-  ['Saudi Arabia','SA'],['Senegal','SN'],['Serbia','RS'],['Singapore','SG'],
-  ['Slovakia','SK'],['Slovenia','SI'],['South Africa','ZA'],['South Korea','KR'],
-  ['Spain','ES'],['Sweden','SE'],['Switzerland','CH'],['Taiwan','TW'],
-  ['Thailand','TH'],['Tunisia','TN'],['Turkey','TR'],['Ukraine','UA'],
-  ['United Arab Emirates','AE'],['United Kingdom','GB'],['United States','US'],
-  ['Uruguay','UY'],['Uzbekistan','UZ'],['Venezuela','VE'],['Vietnam','VN'],
+  ['Czech Republic','CZ'],
+  ['Estonia','EE'],
+  ['Hungary','HU'],
+  ['Latvia','LV'],
+  ['Lithuania','LT'],
+  ['Portugal','PT'],
+  ['Romania','RO'],
+  ['Slovakia','SK'],
+  ['Ukraine','UA'],
 ];
 
 (function buildCountryDropdown() {
@@ -73,42 +58,35 @@ const COUNTRIES = [
 })();
 
 // ── Query count table (mirrors COUNTRY_CITIES + CITY_DISTRICTS in backend) ────
-// Used for cost/time estimates. Values = number of Outscraper API calls per type.
+// Used for cost/time estimates. Values = total Outscraper API calls per type.
+// Country totals account for per-city district expansion.
 const LOCATION_QUERY_COUNT = {
-  // Countries
-  'czech republic': 38, 'czechia': 38,
-  'estonia': 13,
-  'poland': 48,
-  'ukraine': 21,
-  'romania': 31,
-  'latvia': 11,
-  'lithuania': 14,
-  'hungary': 22,
-  'slovakia': 22,
-  'portugal': 30,
-  'germany': 38,
-  'austria': 15,
-  'finland': 20,
-  'norway': 19,
-  'sweden': 20,
-  'denmark': 15,
-  'greece': 19,
-  'israel': 19,
-  'serbia': 15,
-  'croatia': 12,
-  'bulgaria': 14,
-  // Large cities (district-split)
+  // Countries (cities × district queries per large city)
+  'czech republic': 77, 'czechia': 77,  // Prague(22)+Brno(12)+Ostrava(8)+35 cities
+  'estonia': 20,                          // Tallinn(8)+12 cities
+  'latvia': 22,                           // Riga(12)+10 cities
+  'lithuania': 25,                        // Vilnius(12)+13 cities
+  'ukraine': 52,                          // Kyiv(10)+Lviv(6)+Kharkiv(9)+Odessa(4)+23 cities
+  'romania': 36,                          // Bucharest(6)+30 cities
+  'hungary': 44,                          // Budapest(23)+21 cities
+  'slovakia': 31,                         // Bratislava(10)+21 cities
+  'portugal': 50,                         // Lisbon(12)+Porto(10)+28 cities
+  // Cities with district splitting
   'prague': 22, 'praha': 22,
   'brno': 12,
   'ostrava': 8,
-  'warsaw': 14,
-  'krakow': 9, 'kraków': 9, 'cracow': 9,
-  'berlin': 18,
-  'vienna': 23,
+  'tallinn': 8,
+  'riga': 12,
+  'vilnius': 12,
+  'kyiv': 10,
+  'lviv': 6,
+  'kharkiv': 9,
+  'odessa': 4,
+  'lisbon': 12,
+  'porto': 10,
   'budapest': 23,
   'bratislava': 10,
   'bucharest': 6,
-  'athens': 12,
 };
 
 function getQueryCount(location, numTypes) {
