@@ -51,16 +51,30 @@ FOODORA_COLUMNS = [
     ('Platform URL',      'platform_url'),
 ]
 
+# Google Maps columns
+GOOGLE_MAPS_COLUMNS = [
+    ('Restaurant Name',    'name'),
+    ('Address',            'address'),
+    ('City',               'city'),
+    ('Website',            'website'),
+    ('Reviews',            'reviews'),
+    ('Rating',             'rating'),
+    ('Reservation System', 'reservation_system'),
+    ('Google Maps URL',    'google_maps_url'),
+]
+
 PLATFORM_COLUMNS = {
-    'wolt':    WOLT_COLUMNS,
-    'bolt':    BOLT_COLUMNS,
-    'foodora': FOODORA_COLUMNS,
+    'wolt':         WOLT_COLUMNS,
+    'bolt':         BOLT_COLUMNS,
+    'foodora':      FOODORA_COLUMNS,
+    'google_maps':  GOOGLE_MAPS_COLUMNS,
 }
 
 HEADER_COLORS = {
-    'wolt':    '009DE0',   # Wolt blue
-    'bolt':    '34C759',   # Bolt green
-    'foodora': 'E2213D',   # Foodora red
+    'wolt':        '009DE0',   # Wolt blue
+    'bolt':        '34C759',   # Bolt green
+    'foodora':     'E2213D',   # Foodora red
+    'google_maps': '34A853',   # Google green
 }
 
 
