@@ -174,7 +174,8 @@ def scrape_google_maps(
                 drop_duplicates=True,
                 fields=OUTSCRAPER_FIELDS,
             )
-            places = raw[0] if raw else []
+            # API returns flat list of dicts (not list-of-lists)
+            places = raw if isinstance(raw, list) and raw and isinstance(raw[0], dict) else (raw[0] if raw else [])
             print(f'[Google Maps] {btype}: {len(places)} raw results')
 
             for place in places:
