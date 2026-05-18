@@ -17,9 +17,19 @@
       <p class="subtitle">Extract restaurant data and receive an Excel file in your inbox</p>
     </header>
 
-    <main class="card">
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabDelivery" onclick="switchMode('delivery')">
+        🚀 Delivery Platforms
+      </button>
+      <button class="mode-tab" id="tabGoogleMaps" onclick="switchMode('googlemaps')">
+        🗺️ Google Maps
+      </button>
+    </div>
 
-      <!-- Step 1: Platform -->
+    <!-- ── DELIVERY PLATFORMS FORM ─────────────────────────────────── -->
+    <main class="card" id="formDelivery">
+
       <section class="step">
         <h2><span class="step-num">1</span> Platforms</h2>
         <div class="platform-grid">
@@ -47,7 +57,6 @@
         </div>
       </section>
 
-      <!-- Step 2: Location -->
       <section class="step">
         <h2><span class="step-num">2</span> Search Location</h2>
         <div class="input-group autocomplete-wrap">
@@ -57,7 +66,6 @@
         <ul class="autocomplete-list" id="autocompleteList"></ul>
       </section>
 
-      <!-- Step 3: Email -->
       <section class="step">
         <h2><span class="step-num">3</span> Your Email</h2>
         <p class="hint">We'll email you an Excel file with all restaurant data when scraping is done.</p>
@@ -67,16 +75,123 @@
         </div>
       </section>
 
-      <!-- Scrape Button -->
       <button class="btn-scrape" id="btnScrape">
         <span class="btn-icon">🚀</span> Start Scraping
       </button>
     </main>
 
-    <!-- Progress Panel -->
+    <!-- ── GOOGLE MAPS FORM ────────────────────────────────────────── -->
+    <main class="card" id="formGoogleMaps" style="display:none">
+      <div class="gm-header">
+        <h2 class="gm-title">🗺️ Google Maps Scraping</h2>
+        <p class="gm-subtitle">Find all restaurants &amp; cafes in any city or country via Outscraper</p>
+      </div>
+
+      <!-- Step 1: Location -->
+      <section class="step">
+        <h2><span class="step-num">1</span> Location</h2>
+        <div class="location-toggle">
+          <label class="toggle-opt">
+            <input type="radio" name="gmLocMode" value="city" id="gmLocCity" />
+            <span>City</span>
+          </label>
+          <label class="toggle-opt">
+            <input type="radio" name="gmLocMode" value="country" id="gmLocCountry" checked />
+            <span>Country</span>
+          </label>
+        </div>
+
+        <div id="gmCityInput" style="display:none">
+          <div class="input-group">
+            <span class="input-icon">🏙️</span>
+            <input type="text" id="gmCity" placeholder="Prague, Brno, Berlin, Paris..." />
+          </div>
+        </div>
+
+        <div id="gmCountryInput">
+          <div class="input-group">
+            <span class="input-icon">🌍</span>
+            <select id="gmCountry"></select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Business types -->
+      <section class="step">
+        <h2><span class="step-num">2</span> Business Types</h2>
+        <div class="biz-type-grid">
+          <label class="biz-type-opt">
+            <input type="checkbox" name="gmType" value="restaurants" checked />
+            <span>🍽️ Restaurants</span>
+          </label>
+          <label class="biz-type-opt">
+            <input type="checkbox" name="gmType" value="cafes" checked />
+            <span>☕ Cafes &amp; Coffee Shops</span>
+          </label>
+          <label class="biz-type-opt">
+            <input type="checkbox" name="gmType" value="bars" checked />
+            <span>🍺 Bars &amp; Pubs</span>
+          </label>
+          <label class="biz-type-opt">
+            <input type="checkbox" name="gmType" value="bakeries" checked />
+            <span>🥐 Bakeries</span>
+          </label>
+          <label class="biz-type-opt">
+            <input type="checkbox" name="gmType" value="fast_food" checked />
+            <span>🍔 Fast Food</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Step 3: Filters (collapsible) -->
+      <section class="step">
+        <h2 class="collapsible-header" id="filtersToggle" onclick="toggleFilters()">
+          <span class="step-num">3</span> Filters <span class="optional-badge">Optional</span>
+          <span class="collapse-arrow" id="filtersArrow">▼</span>
+        </h2>
+        <div class="filters-body" id="filtersBody" style="display:none">
+          <div class="filter-row">
+            <label>Minimum reviews</label>
+            <input type="number" id="gmMinReviews" value="0" min="0" step="10" />
+          </div>
+          <div class="filter-row">
+            <label>Minimum rating</label>
+            <input type="number" id="gmMinRating" value="0" min="0" max="5" step="0.1" />
+          </div>
+          <div class="filter-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="gmRequireWebsite" />
+              Has website only
+            </label>
+          </div>
+          <div class="filter-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="gmRequirePhone" />
+              Has phone only
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: Email -->
+      <section class="step">
+        <h2><span class="step-num">4</span> Your Email</h2>
+        <p class="hint">We'll email you the Excel file when scraping is done.</p>
+        <div class="input-group">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="gmEmail" placeholder="your@email.com" />
+        </div>
+      </section>
+
+      <button class="btn-scrape btn-gm" id="btnGMScrape">
+        <span class="btn-icon">🔍</span> Start Scraping
+      </button>
+    </main>
+
+    <!-- Progress Panel (shared) -->
     <div class="progress-panel card" id="progressPanel" style="display:none">
       <div class="progress-header">
-        <span class="progress-rocket">🚀</span>
+        <span class="progress-rocket" id="progressIcon">🚀</span>
         <div class="progress-header-text">
           <h3>Scraping in progress</h3>
           <p class="progress-location" id="progressLocation"></p>
@@ -88,6 +203,12 @@
 
       <div class="platform-rows" id="platformRows"></div>
 
+      <!-- Google Maps live count (only shown for GM jobs) -->
+      <div class="gm-live-count" id="gmLiveCount" style="display:none">
+        <span class="gm-count-num" id="gmCountNum">0</span>
+        <span class="gm-count-label">records found so far</span>
+      </div>
+
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="progressBar" style="width:0%"></div>
       </div>
@@ -97,12 +218,22 @@
       </div>
     </div>
 
-    <!-- Done Panel -->
+    <!-- Done Panel (shared) -->
     <div class="done-panel card" id="donePanel" style="display:none">
       <span class="done-icon">✅</span>
       <h3>All done!</h3>
       <p id="doneMsg"></p>
-      <a class="btn-download" id="btnDownload" href="#" download>
+
+      <!-- Google Maps stats summary -->
+      <div class="gm-stats" id="gmStats" style="display:none">
+        <div class="stat-row"><span>Total found</span><strong id="statTotal">—</strong></div>
+        <div class="stat-row"><span>With phone</span><strong id="statPhone">—</strong></div>
+        <div class="stat-row"><span>With website</span><strong id="statWebsite">—</strong></div>
+        <div class="stat-row delivery"><span>With delivery link</span><strong id="statDelivery">—</strong></div>
+        <div class="stat-row reservation"><span>With reservation</span><strong id="statReservation">—</strong></div>
+      </div>
+
+      <a class="btn-download" id="btnDownload" href="#" download style="display:none">
         <span>📥</span> Download Excel File
       </a>
       <p class="hint email-hint">Also sent to your email inbox.</p>

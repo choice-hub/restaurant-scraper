@@ -12,7 +12,7 @@ from scrapers.bolt import scrape_bolt, inject_known_cities
 from scrapers.foodora import scrape_foodora
 from scrapers.glovo import scrape_glovo
 from scrapers.google_maps import scrape_google_maps
-from services.email_service import send_completion_email, send_error_email, build_excel
+from services.email_service import send_completion_email, send_error_email, build_excel, build_google_maps_excel
 
 load_dotenv()
 
@@ -155,7 +155,7 @@ def _cleanup_old_jobs():
         del jobs[jid]
 
 
-def run_scrape_job(job_id, platforms, location, cuisine, email):
+def run_scrape_job(job_id, platforms, location, cuisine, email, gm_params=None):
     job = jobs[job_id]
     try:
         job['status'] = 'running'
@@ -180,8 +180,19 @@ def run_scrape_job(job_id, platforms, location, cuisine, email):
 
             job['platforms_detail'][plat]['status'] = 'running'
 
+            # Google Maps: pass extra params from request
+            if plat == 'google_maps':
+                gm = gm_params or {}
+                results = scraper(
+                    location, cuisine, job,
+                    business_types=gm.get('business_types'),
+                    min_reviews=int(gm.get('min_reviews', 0)),
+                    min_rating=float(gm.get('min_rating', 0.0)),
+                    require_website=bool(gm.get('require_website', False)),
+                    require_phone=bool(gm.get('require_phone', False)),
+                )
             # Foodora and Glovo handle country-level scraping internally
-            if country_cities and plat not in ('foodora', 'glovo'):
+            elif country_cities and plat not in ('foodora', 'glovo'):
                 # Wolt: skip phase-2 detail scraping (phone/merchant) for country batches
                 # to avoid OOM — each city's JSON response is 1-3MB, and 50 cities
                 # can exhaust Render's 512MB limit if pages are also fetched per venue.
@@ -202,18 +213,29 @@ def run_scrape_job(job_id, platforms, location, cuisine, email):
         job['message'] = f'Done! Found {total} restaurants. Preparing file...'
 
         # Build Excel and store for direct download
-        safe_loc = location.replace(', ', '_').replace(' ', '_')
-        platforms_str = '_'.join(p.capitalize() for p in results_by_platform if results_by_platform[p])
-        excel_filename = f'{safe_loc}_{platforms_str}.xlsx'
-        job['excel_bytes'] = build_excel(results_by_platform, location)
+        from datetime import date as _date
+        safe_loc = location.replace(', ', '_').replace(' ', '_').lower()
+        is_gm_only = list(results_by_platform.keys()) == ['google_maps']
+
+        if is_gm_only:
+            gm_results = results_by_platform.get('google_maps', [])
+            gm_stats   = job.get('gm_stats', {})
+            today      = _date.today().isoformat()
+            excel_filename = f'google-maps-{safe_loc}-{today}.xlsx'
+            job['excel_bytes'] = build_google_maps_excel(gm_results, location, gm_stats)
+        else:
+            platforms_str = '_'.join(p.capitalize() for p in results_by_platform if results_by_platform[p])
+            excel_filename = f'{safe_loc}_{platforms_str}.xlsx'
+            job['excel_bytes'] = build_excel(results_by_platform, location)
+
         job['excel_filename'] = excel_filename
 
         try:
             send_completion_email(email, results_by_platform, location)
-            job['message'] = f'Done! {total} restaurants. Email sent.'
+            job['message'] = f'Done! {total} places found. Email sent.'
         except Exception as mail_err:
             print(f'[Job {job_id}] Email failed: {mail_err}')
-            job['message'] = f'Done! {total} restaurants. (Email failed — check SMTP settings)'
+            job['message'] = f'Done! {total} places found. (Email failed — check SMTP settings)'
 
     except Exception as e:
         error_msg = str(e)
@@ -241,6 +263,9 @@ def start_scrape():
         platform = data.get('platform', 'wolt')
         platforms = ['wolt', 'bolt'] if platform == 'both' else [platform]
 
+    # Google Maps extra params
+    gm_params = data.get('gm_params')  # {business_types, min_reviews, min_rating, ...}
+
     if not location:
         return jsonify({'error': 'Location is required'}), 400
     if not email or '@' not in email:
@@ -257,7 +282,7 @@ def start_scrape():
     jobs[job_id] = {
         'id':               job_id,
         'platforms':        platforms,
-        'platform':         '+'.join(platforms),  # legacy display field
+        'platform':         '+'.join(platforms),
         'location':         location,
         'cuisine':          cuisine,
         'email':            email,
@@ -268,13 +293,14 @@ def start_scrape():
         'failed':           0,
         'progress':         0,
         'platforms_detail': {p: {'status': 'pending', 'scraped': 0} for p in platforms},
+        'gm_stats':         {},
         'excel_filename':   None,
         'created_at':       datetime.utcnow().isoformat(),
     }
 
     thread = threading.Thread(
         target=run_scrape_job,
-        args=(job_id, platforms, location, cuisine, email),
+        args=(job_id, platforms, location, cuisine, email, gm_params),
         daemon=True,
     )
     thread.start()
@@ -287,7 +313,7 @@ def get_job(job_id):
     job = jobs.get(job_id)
     if not job:
         return jsonify({'error': 'Job not found'}), 404
-    # Exclude raw bytes from JSON — expose only whether file is ready
+    # Exclude raw bytes from JSON response — expose only whether file is ready
     safe = {k: v for k, v in job.items() if k != 'excel_bytes'}
     safe['has_file'] = bool(job.get('excel_bytes'))
     return jsonify(safe)

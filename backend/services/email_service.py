@@ -52,16 +52,40 @@ FOODORA_COLUMNS = [
     ('Platform URL',      'platform_url'),
 ]
 
-# Google Maps columns
+# Google Maps columns — per-platform delivery/reservation + derived booleans
 GOOGLE_MAPS_COLUMNS = [
-    ('Restaurant Name',    'name'),
-    ('Address',            'address'),
-    ('City',               'city'),
-    ('Website',            'website'),
-    ('Reviews',            'reviews'),
-    ('Rating',             'rating'),
-    ('Reservation System', 'reservation_system'),
-    ('Google Maps URL',    'google_maps_url'),
+    ('Name',                     'name'),
+    ('Category / Cuisine',       'category'),
+    ('Address',                  'address'),
+    ('City',                     'city'),
+    ('Country',                  'country'),
+    ('Latitude',                 'latitude'),
+    ('Longitude',                'longitude'),
+    ('Phone',                    'phone'),
+    ('Website',                  'website'),
+    ('Rating',                   'rating'),
+    ('Review Count',             'reviews'),
+    ('Price Range',              'price_range'),
+    ('Opening Hours',            'working_hours'),
+    ('Permanently Closed',       'permanently_closed'),
+    ('Temporarily Closed',       'temporarily_closed'),
+    ('Delivery - Uber Eats',     'delivery_uber_eats'),
+    ('Delivery - DoorDash',      'delivery_doordash'),
+    ('Delivery - Wolt',          'delivery_wolt'),
+    ('Delivery - Bolt Food',     'delivery_bolt_food'),
+    ('Delivery - Deliveroo',     'delivery_deliveroo'),
+    ('Delivery - Just Eat',      'delivery_just_eat'),
+    ('Delivery - Other',         'delivery_other'),
+    ('Has Delivery',             'has_delivery'),
+    ('Reservation - OpenTable',  'reservation_opentable'),
+    ('Reservation - Resy',       'reservation_resy'),
+    ('Reservation - SevenRooms', 'reservation_sevenrooms'),
+    ('Reservation - Tock',       'reservation_tock'),
+    ('Reservation - Other',      'reservation_other'),
+    ('Has Reservation',          'has_reservation'),
+    ('Photo URL 1',              'photo_url_1'),
+    ('Google Maps URL',          'google_maps_url'),
+    ('Place ID',                 'place_id'),
 ]
 
 PLATFORM_COLUMNS = {
@@ -198,6 +222,130 @@ def send_completion_email(to_email: str, results_by_platform: dict, location: st
     </body></html>
     """
     _send(to_email, subject, html, attachment=excel_bytes, filename=filename)
+
+
+def build_google_maps_excel(results: list, location: str, stats: dict = None) -> bytes:
+    """
+    Build a 4-sheet Excel for Google Maps results:
+    1. All Results
+    2. Has Delivery  (has delivery_platforms)
+    3. Has Reservation (has reservation_system)
+    4. Summary stats
+    """
+    columns = GOOGLE_MAPS_COLUMNS
+    color   = '34A853'   # Google green
+
+    wb = openpyxl.Workbook(write_only=True)
+
+    def _write_data_sheet(title, rows):
+        ws = wb.create_sheet(title=title[:31])
+
+        # Pre-compute column widths from raw data before first append
+        col_widths = [len(h) for h, _ in columns]
+        for r in rows[:200]:
+            for ci, (_, key) in enumerate(columns):
+                col_widths[ci] = max(col_widths[ci], len(str(r.get(key, '') or '')))
+        for ci, w in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(ci)].width = min(w + 4, 60)
+
+        hfont  = Font(bold=True, color='FFFFFF')
+        hfill  = PatternFill('solid', fgColor=color)
+        halign = Alignment(horizontal='center', vertical='center')
+
+        header_cells = []
+        for h, _ in columns:
+            c = WriteOnlyCell(ws, value=h)
+            c.font, c.fill, c.alignment = hfont, hfill, halign
+            header_cells.append(c)
+        ws.append(header_cells)
+
+        # Row highlighting: delivery=green, reservation=yellow, both=orange
+        del_fill  = PatternFill('solid', fgColor='E6F4EA')   # light green
+        res_fill  = PatternFill('solid', fgColor='FFFDE7')   # light yellow
+        both_fill = PatternFill('solid', fgColor='FFE0B2')   # light orange
+
+        for r in rows:
+            has_del = r.get('has_delivery') == 'TRUE'
+            has_res = r.get('has_reservation') == 'TRUE'
+            row_fill = both_fill if (has_del and has_res) else del_fill if has_del else res_fill if has_res else None
+
+            if row_fill:
+                row_cells = []
+                for _, key in columns:
+                    c = WriteOnlyCell(ws, value=r.get(key, ''))
+                    c.fill = row_fill
+                    row_cells.append(c)
+                ws.append(row_cells)
+            else:
+                ws.append([r.get(key, '') for _, key in columns])
+
+    # Sheet 1: All Results
+    _write_data_sheet('All Results', results)
+
+    # Sheet 2: Has Delivery
+    delivery_rows = [r for r in results if r.get('delivery_platforms')]
+    _write_data_sheet(f'Has Delivery ({len(delivery_rows)})', delivery_rows)
+
+    # Sheet 3: Has Reservation
+    reservation_rows = [r for r in results if r.get('reservation_system')]
+    _write_data_sheet(f'Has Reservation ({len(reservation_rows)})', reservation_rows)
+
+    # Sheet 4: Summary
+    ws_sum = wb.create_sheet(title='Summary')
+
+    # Count by delivery platform
+    from collections import Counter
+    delivery_counts: Counter = Counter()
+    for r in results:
+        for plat in r.get('delivery_platforms', '').split(', '):
+            if plat:
+                delivery_counts[plat] += 1
+
+    reservation_counts: Counter = Counter()
+    for r in results:
+        res = r.get('reservation_system', '')
+        if res:
+            reservation_counts[res] += 1
+
+    city_counts: Counter = Counter(r.get('city', 'Unknown') for r in results)
+
+    hfont = Font(bold=True, color='FFFFFF')
+    hfill = PatternFill('solid', fgColor=color)
+
+    def hrow(label):
+        c = WriteOnlyCell(ws_sum, value=label)
+        c.font, c.fill = hfont, hfill
+        return [c]
+
+    ws_sum.column_dimensions['A'].width = 30
+    ws_sum.column_dimensions['B'].width = 15
+
+    total = len(results)
+    with_phone    = sum(1 for r in results if r.get('phone'))
+    with_website  = sum(1 for r in results if r.get('website'))
+
+    ws_sum.append(hrow(f'Google Maps — {location}'))
+    ws_sum.append(['Total found',       total])
+    ws_sum.append(['With phone',        with_phone,   f'{round(with_phone/total*100) if total else 0}%'])
+    ws_sum.append(['With website',      with_website, f'{round(with_website/total*100) if total else 0}%'])
+    ws_sum.append(['With delivery',     len(delivery_rows), f'{round(len(delivery_rows)/total*100) if total else 0}%'])
+    ws_sum.append(['With reservation',  len(reservation_rows), f'{round(len(reservation_rows)/total*100) if total else 0}%'])
+    ws_sum.append([])
+    ws_sum.append(hrow('Delivery platforms'))
+    for plat, cnt in delivery_counts.most_common():
+        ws_sum.append([plat, cnt])
+    ws_sum.append([])
+    ws_sum.append(hrow('Reservation systems'))
+    for sys_, cnt in reservation_counts.most_common():
+        ws_sum.append([sys_, cnt])
+    ws_sum.append([])
+    ws_sum.append(hrow('Top cities'))
+    for city, cnt in city_counts.most_common(20):
+        ws_sum.append([city, cnt])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 def send_error_email(to_email: str, platform: str, location: str, error_message: str):
