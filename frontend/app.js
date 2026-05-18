@@ -72,14 +72,94 @@ const COUNTRIES = [
   });
 })();
 
+// ── Query count table (mirrors COUNTRY_CITIES + CITY_DISTRICTS in backend) ────
+// Used for cost/time estimates. Values = number of Outscraper API calls per type.
+const LOCATION_QUERY_COUNT = {
+  // Countries
+  'czech republic': 38, 'czechia': 38,
+  'estonia': 13,
+  'poland': 48,
+  'ukraine': 21,
+  'romania': 31,
+  'latvia': 11,
+  'lithuania': 14,
+  'hungary': 22,
+  'slovakia': 22,
+  'portugal': 30,
+  'germany': 38,
+  'austria': 15,
+  'finland': 20,
+  'norway': 19,
+  'sweden': 20,
+  'denmark': 15,
+  'greece': 19,
+  'israel': 19,
+  'serbia': 15,
+  'croatia': 12,
+  'bulgaria': 14,
+  // Large cities (district-split)
+  'prague': 22, 'praha': 22,
+  'brno': 12,
+  'ostrava': 8,
+  'warsaw': 14,
+  'krakow': 9, 'kraków': 9, 'cracow': 9,
+  'berlin': 18,
+  'vienna': 23,
+  'budapest': 23,
+  'bratislava': 10,
+  'bucharest': 6,
+  'athens': 12,
+};
+
+function getQueryCount(location, numTypes) {
+  const key = (location || '').trim().toLowerCase().split(',')[0].trim();
+  const perType = LOCATION_QUERY_COUNT[key] || 1;
+  return perType * numTypes;
+}
+
+function updateGMEstimate() {
+  const locMode  = document.querySelector('input[name="gmLocMode"]:checked')?.value;
+  const location = locMode === 'city'
+    ? document.getElementById('gmCity').value.trim()
+    : document.getElementById('gmCountry').value.trim();
+  const numTypes = document.querySelectorAll('input[name="gmType"]:checked').length;
+
+  if (!location || numTypes === 0) {
+    document.getElementById('gmEstimate').style.display = 'none';
+    return;
+  }
+
+  const queries   = getQueryCount(location, numTypes);
+  const avgPerQ   = 200;  // conservative average records per query
+  const minRec    = queries * 80;
+  const maxRec    = queries * 400;
+  const minCost   = (minRec * 0.003).toFixed(2);
+  const maxCost   = (maxRec * 0.003).toFixed(2);
+  const minMins   = Math.ceil(queries * 30 / 60);
+  const maxMins   = Math.ceil(queries * 45 / 60);
+
+  document.getElementById('estTime').textContent    = minMins === maxMins ? `~${minMins} min` : `~${minMins}–${maxMins} min`;
+  document.getElementById('estCost').textContent    = `~$${minCost}–$${maxCost}`;
+  document.getElementById('estQueries').textContent = `${queries} (${numTypes} type${numTypes > 1 ? 's' : ''} × ${queries / numTypes} area${queries / numTypes > 1 ? 's' : ''})`;
+  document.getElementById('gmEstimate').style.display = '';
+}
+
 // ── Location mode toggle (City / Country) ─────────────────────────────────────
 document.querySelectorAll('input[name="gmLocMode"]').forEach(radio => {
   radio.addEventListener('change', () => {
     const isCity = radio.value === 'city';
     document.getElementById('gmCityInput').style.display    = isCity ? '' : 'none';
     document.getElementById('gmCountryInput').style.display = isCity ? 'none' : '';
+    updateGMEstimate();
   });
 });
+
+// Trigger estimate update when country / city / types change
+document.getElementById('gmCountry').addEventListener('change', updateGMEstimate);
+document.getElementById('gmCity').addEventListener('input', updateGMEstimate);
+document.querySelectorAll('input[name="gmType"]').forEach(cb => cb.addEventListener('change', updateGMEstimate));
+// Run once on load to show estimate for default selection (Czech Republic, all types)
+updateGMEstimate();
 
 // ── Filters toggle ────────────────────────────────────────────────────────────
 function toggleFilters() {
@@ -219,6 +299,11 @@ document.getElementById('btnGMScrape').addEventListener('click', async () => {
     require_phone:   document.getElementById('gmRequirePhone').checked,
   };
 
+  // Show ETA in progress panel header
+  const totalQueries = getQueryCount(location, businessTypes.length);
+  const etaMins = Math.ceil(totalQueries * 35 / 60);
+  const etaText = etaMins < 2 ? '~1 min' : `~${etaMins} min`;
+
   jobStartTime = null;
   showPanel('progress');
   document.getElementById('progressLocation').textContent = location;
@@ -226,6 +311,8 @@ document.getElementById('btnGMScrape').addEventListener('click', async () => {
   document.getElementById('platformRows').innerHTML = '';
   document.getElementById('gmLiveCount').style.display = '';
   document.getElementById('gmCountNum').textContent = '0';
+  document.getElementById('etaText').textContent = etaText;
+  document.getElementById('etaBadge').style.display = 'flex';
   setProgress(0, 'Connecting to Google Maps...');
 
   try {

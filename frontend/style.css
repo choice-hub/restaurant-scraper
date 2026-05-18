@@ -920,6 +920,34 @@ header .subtitle {
   cursor: pointer;
 }
 
+/* ── GM estimate box ────────────────────────────────────────── */
+.gm-estimate {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeUp 0.2s ease both;
+}
+
+.est-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.est-row span { color: rgba(255,255,255,0.5); }
+
+.est-row strong {
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Google Maps scrape button (green) ──────────────────────── */
 .btn-gm {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%) !important;

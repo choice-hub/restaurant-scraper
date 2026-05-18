@@ -163,6 +163,15 @@ COUNTRY_CITIES = {
         'Khmelnytskyi', 'Uzhhorod', 'Kremenchuk', 'Kropyvnytskyi',
     ],
 
+    # Portugal
+    'portugal': [
+        'Lisbon', 'Porto', 'Amadora', 'Braga', 'Setúbal', 'Coimbra', 'Funchal',
+        'Almada', 'Agualva-Cacém', 'Queluz', 'Vila Nova de Gaia', 'Aveiro',
+        'Évora', 'Faro', 'Viseu', 'Leiria', 'Guimarães', 'Cascais', 'Oeiras',
+        'Loures', 'Sintra', 'Barcelos', 'Viana do Castelo', 'Covilhã', 'Portimão',
+        'Matosinhos', 'Gondomar', 'Maia', 'Vila Franca de Xira', 'Barreiro',
+    ],
+
     # Romania
     'romania': [
         'Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova',

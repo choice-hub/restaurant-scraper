@@ -231,7 +231,16 @@ def run_scrape_job(job_id, platforms, location, cuisine, email, gm_params=None):
         job['excel_filename'] = excel_filename
 
         try:
-            send_completion_email(email, results_by_platform, location)
+            # For GM-only jobs reuse the already-built 4-sheet excel so the
+            # email attachment matches the download (not the basic 1-sheet version)
+            if is_gm_only:
+                from services.email_service import send_google_maps_completion_email
+                send_google_maps_completion_email(
+                    email, results_by_platform.get('google_maps', []),
+                    location, job.get('gm_stats', {}), job['excel_bytes'], excel_filename,
+                )
+            else:
+                send_completion_email(email, results_by_platform, location)
             job['message'] = f'Done! {total} places found. Email sent.'
         except Exception as mail_err:
             print(f'[Job {job_id}] Email failed: {mail_err}')
