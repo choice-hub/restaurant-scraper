@@ -455,75 +455,109 @@ OUTSCRAPER_FIELDS = (
     'order_links,booking_appointment_link,reservation_links,photos,photo,url,place_id'
 )
 
-# ── Delivery platform matchers ────────────────────────────────────────────────
-# Each entry: (column_key, display_name, [domain_fragments])
-_DELIVERY_MATCHERS = [
-    ('delivery_wolt',       'Wolt',        ['wolt.com']),
-    ('delivery_bolt_food',  'Bolt Food',   ['food.bolt.eu', 'bolt.eu/food', 'bolt.eu']),
-    ('delivery_uber_eats',  'Uber Eats',   ['ubereats.com']),
-    ('delivery_foodora',    'Foodora',     ['foodora.com', 'foodora.cz', 'foodora.at',
-                                            'foodora.se', 'foodora.no', 'foodora.fi']),
-    ('delivery_deliveroo',  'Deliveroo',   ['deliveroo.com']),
-    ('delivery_just_eat',   'Just Eat',    ['just-eat.com', 'just-eat.co.uk', 'justeat.com']),
-    ('delivery_doordash',   'DoorDash',    ['doordash.com']),
-    ('delivery_glovo',      'Glovo',       ['glovoapp.com', 'glovo.com']),
-    ('delivery_takeaway',   'Takeaway',    ['takeaway.com', 'lieferando.de', 'thuisbezorgd.nl',
-                                            'pyszne.pl', 'pizza.cz', 'damejidlo.cz']),
-]
+# ── Known provider display names ──────────────────────────────────────────────
+# Maps domain fragment → human-readable name for well-known platforms.
+# Sorted longest-first at runtime so "food.bolt.eu" wins over "bolt.eu".
+# For any URL NOT in this list, the 2nd-level domain is used automatically,
+# so local/regional providers in any country are handled without hardcoding.
+_KNOWN_DELIVERY = {
+    'wolt.com':          'Wolt',
+    'food.bolt.eu':      'Bolt Food',
+    'bolt.eu':           'Bolt Food',
+    'ubereats.com':      'Uber Eats',
+    'foodora.':          'Foodora',      # covers .com .cz .at .se .no .fi etc.
+    'deliveroo.com':     'Deliveroo',
+    'just-eat.':         'Just Eat',
+    'justeat.com':       'Just Eat',
+    'doordash.com':      'DoorDash',
+    'glovoapp.com':      'Glovo',
+    'glovo.com':         'Glovo',
+    'takeaway.com':      'Takeaway',
+    'lieferando.':       'Lieferando',
+    'thuisbezorgd.nl':   'Thuisbezorgd',
+    'pyszne.pl':         'Pyszne',
+    'pizza.cz':          'Pizza.cz',
+    'damejidlo.cz':      'DámeJídlo',
+    'bolt.food':         'Bolt Food',
+}
 
-# ── Reservation / booking platform matchers ───────────────────────────────────
-# "Google Reserve" is NOT a company — it's a wrapper. We extract the real
-# partner from the URL (see _google_reserve_partner below).
-_RESERVATION_MATCHERS = [
-    ('reservation_opentable',   'OpenTable',      ['opentable.com']),
-    ('reservation_resy',        'Resy',            ['resy.com']),
-    ('reservation_sevenrooms',  'SevenRooms',      ['sevenrooms.com']),
-    ('reservation_tock',        'Tock',            ['tock.com', 'exploretock.com']),
-    ('reservation_quandoo',     'Quandoo',         ['quandoo.com', 'quandoo.cz', 'quandoo.de',
-                                                    'quandoo.co.uk', 'quandoo.hu', 'quandoo.ro',
-                                                    'quandoo.pt', 'quandoo.sk', 'quandoo.ee',
-                                                    'quandoo.lt', 'quandoo.lv']),
-    ('reservation_thefork',     'TheFork',         ['thefork.com', 'lafourchette.com',
-                                                    'eltenedor.com', 'dimmi.com.au']),
-    ('reservation_bookatable',  'Bookatable',      ['bookatable.com', 'bookatable.co.uk']),
-    ('reservation_resdiary',    'ResDiary',        ['resdiary.com']),
-    ('reservation_apetee',      'Apetee',          ['apetee.com']),
-    ('reservation_dishco',      'Dish',            ['dish.co', 'dish.com']),
-    ('reservation_forky',       'Forky',           ['forky.cz']),
-    ('reservation_choice',      'Choice',          ['choiceqr.com', 'app.choiceqr.com']),
-    ('reservation_stoly',       'Stoly',           ['stoly.cz']),
-    ('reservation_reservio',    'Reservio',        ['reservio.com']),
-    ('reservation_tablein',     'Tablein',         ['tablein.com']),
-    ('reservation_eveve',       'Eveve',           ['eveve.com']),
-    ('reservation_dineplan',    'Dineplan',        ['dineplan.com']),
-    ('reservation_hostme',      'Hostme',          ['hostme.today', 'joinhostme.com']),
-    ('reservation_restu',       'Restu',           ['restu.cz', 'restu.sk']),
-]
+_KNOWN_RESERVATION = {
+    'opentable.com':     'OpenTable',
+    'resy.com':          'Resy',
+    'sevenrooms.com':    'SevenRooms',
+    'tock.com':          'Tock',
+    'exploretock.com':   'Tock',
+    'quandoo.':          'Quandoo',      # covers all country TLDs
+    'thefork.com':       'TheFork',
+    'lafourchette.com':  'TheFork',
+    'eltenedor.com':     'TheFork',
+    'bookatable.':       'Bookatable',
+    'resdiary.com':      'ResDiary',
+    'dish.co':           'Dish',
+    'forky.cz':          'Forky',
+    'choiceqr.com':      'Choice',
+    'reservio.com':      'Reservio',
+    'stoly.cz':          'Stoly',
+    'tablein.com':       'Tablein',
+    'eveve.com':         'Eveve',
+    'dineplan.com':      'Dineplan',
+    'hostme.today':      'Hostme',
+    'joinhostme.com':    'Hostme',
+    'apetee.com':        'Apetee',
+    'restu.cz':          'Restu',
+    'restu.sk':          'Restu',
+}
 
-# Known partners for Reserve with Google (source= query param in google.com/maps/reserve URLs)
+# Known partner slugs in Google Reserve URLs (source= / partner= params)
 _GOOGLE_RESERVE_PARTNERS = {
+    **{k: v for k, v in _KNOWN_RESERVATION.items()
+       if not k.endswith('.')},  # reuse known names where slug matches domain
     'thefork': 'TheFork', 'lafourchette': 'TheFork',
-    'opentable': 'OpenTable',
-    'resy': 'Resy',
-    'quandoo': 'Quandoo',
-    'bookatable': 'Bookatable',
-    'sevenrooms': 'SevenRooms',
-    'tock': 'Tock',
-    'forky': 'Forky',
-    'dish': 'Dish',
-    'choice': 'Choice',
-    'reservio': 'Reservio',
-    'tablein': 'Tablein',
-    'eveve': 'Eveve',
-    'stoly': 'Stoly',
+    'quandoo': 'Quandoo', 'opentable': 'OpenTable',
+    'resy': 'Resy', 'sevenrooms': 'SevenRooms',
+    'tock': 'Tock', 'forky': 'Forky', 'dish': 'Dish',
+    'choice': 'Choice', 'reservio': 'Reservio',
+    'tablein': 'Tablein', 'eveve': 'Eveve', 'stoly': 'Stoly',
 }
 
 
+def _name_from_url(url: str, known_map: dict, own_domain: str) -> str:
+    """
+    Return a provider display name for any URL:
+    1. Match against known_map (longest key wins).
+    2. Skip if it's the restaurant's own domain.
+    3. Auto-extract 2nd-level domain (e.g. bookings.xyz.cz → 'xyz.cz').
+    Returns '' if the URL should be skipped.
+    """
+    import urllib.parse
+    url_lower = url.lower()
+
+    # Skip Google wrapper URLs (handled separately)
+    if 'google.com' in url_lower or 'goo.gl' in url_lower:
+        return ''
+
+    # Skip restaurant's own website
+    if own_domain:
+        own = own_domain.lstrip('www.').split('/')[0]
+        if own and own in url_lower:
+            return ''
+
+    # Check known platforms — longest key first for specificity
+    for domain, name in sorted(known_map.items(), key=lambda x: -len(x[0])):
+        if domain in url_lower:
+            return name
+
+    # Auto-extract: use 2nd-level domain as provider name
+    try:
+        host = urllib.parse.urlparse(url).netloc.lower().lstrip('www.')
+        parts = host.split('.')
+        return '.'.join(parts[-2:]) if len(parts) >= 2 else host
+    except Exception:
+        return ''
+
+
 def _google_reserve_partner(url: str) -> str:
-    """
-    Extract the real booking partner from a google.com/maps/reserve URL.
-    Returns empty string if the partner cannot be determined.
-    """
+    """Extract the real booking partner from a google.com/maps/reserve URL."""
     import urllib.parse
     try:
         parsed = urllib.parse.urlparse(url)
@@ -532,34 +566,12 @@ def _google_reserve_partner(url: str) -> str:
             val = qs.get(key, [''])[0].lower().split('.')[0]
             if val in _GOOGLE_RESERVE_PARTNERS:
                 return _GOOGLE_RESERVE_PARTNERS[val]
-        # Also scan path segments
         for segment in parsed.path.lower().split('/'):
             if segment in _GOOGLE_RESERVE_PARTNERS:
                 return _GOOGLE_RESERVE_PARTNERS[segment]
     except Exception:
         pass
     return ''
-
-
-def _booking_domain_label(url: str, own_site: str) -> str:
-    """
-    For unrecognised booking URLs, return the second-level domain as a
-    human-readable company label (e.g. 'stoly.cz', 'reservio.com').
-    Returns '' if the URL looks like the restaurant's own site.
-    """
-    import urllib.parse
-    try:
-        host = urllib.parse.urlparse(url).netloc.lower().lstrip('www.')
-        if not host:
-            return ''
-        # Skip restaurant's own website
-        if own_site and own_site.lstrip('www.').split('/')[0] in host:
-            return ''
-        # Return second-level domain (e.g. 'reservations.xyz.cz' → 'xyz.cz')
-        parts = host.split('.')
-        return '.'.join(parts[-2:]) if len(parts) >= 2 else host
-    except Exception:
-        return ''
 
 
 def _extract_company_name(url: str, matchers: list) -> str:
@@ -639,72 +651,38 @@ def _parse_place(r: dict, business_type: str) -> dict:
 
     result = {}
 
-    # Also check website URL — some restaurants set their Wolt/Foodora page
-    # as their Google Maps website, or their website redirects to a platform.
     website_url = r.get('website', '') or ''
+    own_domain  = website_url.lower().lstrip('https://').lstrip('http://').lstrip('www.').split('/')[0]
 
-    # All candidate delivery URLs: order_links first, then website as fallback
-    all_delivery_candidates = order_links + ([website_url] if website_url else [])
+    # ── Delivery companies ─────────────────────────────────────────────────────
+    # Scan order_links; also check website as fallback (some restaurants set
+    # their Wolt/Foodora page as their Google Maps website link).
+    delivery_names = []
+    for url in order_links + ([website_url] if website_url else []):
+        name = _name_from_url(url, _KNOWN_DELIVERY, own_domain)
+        if name and name not in delivery_names:
+            delivery_names.append(name)
 
-    # ── Per-platform delivery columns ─────────────────────────────────────────
-    matched_delivery_urls = set()
-    delivery_company_names = []
-    for col, name, domains in _DELIVERY_MATCHERS:
-        found = ''
-        for link in all_delivery_candidates:
-            if any(d in link.lower() for d in domains):
-                found = link
-                matched_delivery_urls.add(link)
-                if name not in delivery_company_names:
-                    delivery_company_names.append(name)
-                break
-        result[col] = found
+    result['delivery_companies'] = ', '.join(delivery_names)
+    result['has_delivery'] = 'TRUE' if delivery_names else ''
 
-    other_delivery = [l for l in order_links if l not in matched_delivery_urls]
-    result['delivery_other'] = other_delivery[0] if other_delivery else ''
-    if other_delivery:
-        delivery_company_names.append('Other')
+    # ── Reservation companies ──────────────────────────────────────────────────
+    reservation_names = []
+    for url in booking_links:
+        url_lower = url.lower()
+        if 'google.com/maps/reserve' in url_lower or 'maps.google' in url_lower:
+            # Google Reserve wrapper — extract the real partner from URL params
+            partner = _google_reserve_partner(url)
+            if partner and partner not in reservation_names:
+                reservation_names.append(partner)
+            # If partner unknown, skip — do NOT label "Google Reserve"
+        else:
+            name = _name_from_url(url, _KNOWN_RESERVATION, own_domain)
+            if name and name not in reservation_names:
+                reservation_names.append(name)
 
-    result['delivery_companies'] = ', '.join(delivery_company_names)
-    result['has_delivery'] = 'TRUE' if delivery_company_names else ''
-
-    # ── Per-platform reservation columns ──────────────────────────────────────
-    own_site = (r.get('website') or '').lower().rstrip('/').lstrip('www.')
-
-    matched_res_urls = set()
-    reservation_company_names = []
-    for col, name, domains in _RESERVATION_MATCHERS:
-        found = ''
-        for link in booking_links:
-            if any(d in link.lower() for d in domains):
-                found = link
-                matched_res_urls.add(link)
-                if name not in reservation_company_names:
-                    reservation_company_names.append(name)
-                break
-        result[col] = found
-
-    # Handle Google Reserve links — extract real partner instead of labelling "Google Reserve"
-    google_reserve_urls = [l for l in booking_links
-                           if 'google.com/maps/reserve' in l.lower() or
-                              'maps.google' in l.lower()]
-    for gr_url in google_reserve_urls:
-        matched_res_urls.add(gr_url)
-        partner = _google_reserve_partner(gr_url)
-        if partner and partner not in reservation_company_names:
-            reservation_company_names.append(partner)
-        # If partner unknown, skip — do NOT add "Google Reserve" as company name
-
-    # For remaining unmatched links, extract domain as company label
-    other_res = [l for l in booking_links if l not in matched_res_urls]
-    result['reservation_other'] = other_res[0] if other_res else ''
-    for link in other_res:
-        label = _booking_domain_label(link, own_site)
-        if label and label not in reservation_company_names:
-            reservation_company_names.append(label)
-
-    result['reservation_companies'] = ', '.join(reservation_company_names)
-    result['has_reservation'] = 'TRUE' if reservation_company_names else ''
+    result['reservation_companies'] = ', '.join(reservation_names)
+    result['has_reservation'] = 'TRUE' if reservation_names else ''
 
     # ── Working hours ──────────────────────────────────────────────────────────
     wh = r.get('working_hours', '')
