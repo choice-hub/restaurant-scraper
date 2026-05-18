@@ -32,13 +32,11 @@ CITY_DISTRICTS = {
                 'Hrabůvka', 'Zábřeh', 'Vítkovice', 'Slezská Ostrava'],
     'plzen':   ['Plzeň 1', 'Plzeň 2', 'Plzeň 3', 'Plzeň 4',
                 'Plzeň 5', 'Plzeň 6', 'Plzeň 7', 'Plzeň 8', 'Plzeň 9', 'Plzeň 10'],
-    # Poland
+    # Poland — merged duplicate 'warsaw' entries into one comprehensive list
     'warsaw':  ['Warsaw Śródmieście', 'Warsaw Mokotów', 'Warsaw Praga-Południe',
                 'Warsaw Wola', 'Warsaw Ursynów', 'Warsaw Bielany', 'Warsaw Targówek',
                 'Warsaw Wilanów', 'Warsaw Białołęka', 'Warsaw Ochota',
                 'Warsaw Bemowo', 'Warsaw Żoliborz', 'Warsaw Włochy', 'Warsaw Wesoła'],
-    'warsaw':  ['Śródmieście Warsaw', 'Mokotów Warsaw', 'Praga-Południe Warsaw',
-                'Wola Warsaw', 'Ursynów Warsaw', 'Bielany Warsaw', 'Żoliborz Warsaw'],
     'krakow':  ['Kraków Stare Miasto', 'Kraków Kazimierz', 'Kraków Podgórze',
                 'Kraków Krowodrza', 'Kraków Nowa Huta', 'Kraków Bronowice',
                 'Kraków Dębniki', 'Kraków Grzegórzki', 'Kraków Prądnik Biały'],
@@ -75,6 +73,307 @@ CITY_DISTRICTS = {
                 'Athens Halandri', 'Athens Marousi'],
 }
 
+# ── Country → city list mapping ───────────────────────────────────────────────
+# When a user scrapes a country, we query each major city individually (~500
+# results each) and deduplicate by place_id.  Keys are lowercase name variants.
+COUNTRY_CITIES = {
+    # Czech Republic
+    'czech republic': [
+        'Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc',
+        'Ústí nad Labem', 'České Budějovice', 'Hradec Králové', 'Pardubice',
+        'Zlín', 'Havířov', 'Kladno', 'Most', 'Opava', 'Frýdek-Místek',
+        'Karviná', 'Jihlava', 'Teplice', 'Děčín', 'Karlovy Vary', 'Chomutov',
+        'Přerov', 'Jablonec nad Nisou', 'Prostějov', 'Mladá Boleslav',
+        'Třebíč', 'Nový Jičín', 'Česká Lípa', 'Znojmo', 'Vsetín', 'Šumperk',
+        'Kolín', 'Trutnov', 'Tábor', 'Litoměřice', 'Cheb', 'Kroměříž',
+    ],
+    'czechia': [
+        'Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc',
+        'Ústí nad Labem', 'České Budějovice', 'Hradec Králové', 'Pardubice',
+        'Zlín', 'Havířov', 'Kladno', 'Most', 'Opava', 'Frýdek-Místek',
+        'Karviná', 'Jihlava', 'Teplice', 'Děčín', 'Karlovy Vary', 'Chomutov',
+        'Přerov', 'Jablonec nad Nisou', 'Prostějov', 'Mladá Boleslav',
+        'Třebíč', 'Nový Jičín', 'Česká Lípa', 'Znojmo', 'Vsetín', 'Šumperk',
+        'Kolín', 'Trutnov', 'Tábor', 'Litoměřice', 'Cheb', 'Kroměříž',
+    ],
+    'czech': [
+        'Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc',
+        'Ústí nad Labem', 'České Budějovice', 'Hradec Králové', 'Pardubice',
+        'Zlín', 'Havířov', 'Kladno', 'Most', 'Opava', 'Frýdek-Místek',
+        'Karviná', 'Jihlava', 'Teplice', 'Děčín', 'Karlovy Vary', 'Chomutov',
+        'Přerov', 'Jablonec nad Nisou', 'Prostějov', 'Mladá Boleslav',
+        'Třebíč', 'Nový Jičín', 'Česká Lípa', 'Znojmo', 'Vsetín', 'Šumperk',
+        'Kolín', 'Trutnov', 'Tábor', 'Litoměřice', 'Cheb', 'Kroměříž',
+    ],
+    'česká republika': [
+        'Prague', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc',
+        'Ústí nad Labem', 'České Budějovice', 'Hradec Králové', 'Pardubice',
+        'Zlín', 'Havířov', 'Kladno', 'Most', 'Opava', 'Frýdek-Místek',
+        'Karviná', 'Jihlava', 'Teplice', 'Děčín', 'Karlovy Vary', 'Chomutov',
+        'Přerov', 'Jablonec nad Nisou', 'Prostějov', 'Mladá Boleslav',
+        'Třebíč', 'Nový Jičín', 'Česká Lípa', 'Znojmo', 'Vsetín', 'Šumperk',
+        'Kolín', 'Trutnov', 'Tábor', 'Litoměřice', 'Cheb', 'Kroměříž',
+    ],
+
+    # Estonia
+    'estonia': [
+        'Tallinn', 'Tartu', 'Narva', 'Pärnu', 'Kohtla-Järve', 'Viljandi',
+        'Rakvere', 'Sillamäe', 'Maardu', 'Võru', 'Kuressaare', 'Valga', 'Jõhvi',
+    ],
+    'eesti': [
+        'Tallinn', 'Tartu', 'Narva', 'Pärnu', 'Kohtla-Järve', 'Viljandi',
+        'Rakvere', 'Sillamäe', 'Maardu', 'Võru', 'Kuressaare', 'Valga', 'Jõhvi',
+    ],
+
+    # Poland
+    'poland': [
+        'Warsaw', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 'Gdańsk', 'Szczecin',
+        'Bydgoszcz', 'Lublin', 'Białystok', 'Katowice', 'Gdynia', 'Częstochowa',
+        'Radom', 'Sosnowiec', 'Toruń', 'Kielce', 'Rzeszów', 'Gliwice', 'Zabrze',
+        'Olsztyn', 'Bielsko-Biała', 'Bytom', 'Zielona Góra', 'Rybnik',
+        'Ruda Śląska', 'Opole', 'Tychy', 'Gorzów Wielkopolski', 'Elbląg',
+        'Dąbrowa Górnicza', 'Płock', 'Wałbrzych', 'Włocławek', 'Tarnów',
+        'Chorzów', 'Koszalin', 'Kalisz', 'Legnica', 'Grudziądz', 'Jaworzno',
+        'Słupsk', 'Jastrzębie-Zdrój', 'Nowy Sącz', 'Jelenia Góra', 'Siedlce',
+        'Mysłowice', 'Konin',
+    ],
+    'polska': [
+        'Warsaw', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 'Gdańsk', 'Szczecin',
+        'Bydgoszcz', 'Lublin', 'Białystok', 'Katowice', 'Gdynia', 'Częstochowa',
+        'Radom', 'Sosnowiec', 'Toruń', 'Kielce', 'Rzeszów', 'Gliwice', 'Zabrze',
+        'Olsztyn', 'Bielsko-Biała', 'Bytom', 'Zielona Góra', 'Rybnik',
+        'Ruda Śląska', 'Opole', 'Tychy', 'Gorzów Wielkopolski', 'Elbląg',
+        'Dąbrowa Górnicza', 'Płock', 'Wałbrzych', 'Włocławek', 'Tarnów',
+        'Chorzów', 'Koszalin', 'Kalisz', 'Legnica', 'Grudziądz', 'Jaworzno',
+        'Słupsk', 'Jastrzębie-Zdrój', 'Nowy Sącz', 'Jelenia Góra', 'Siedlce',
+        'Mysłowice', 'Konin',
+    ],
+
+    # Ukraine
+    'ukraine': [
+        'Kyiv', 'Lviv', 'Kharkiv', 'Odessa', 'Dnipro', 'Zaporizhzhia',
+        'Vinnytsia', 'Mykolaiv', 'Poltava', 'Chernivtsi', 'Cherkasy',
+        'Zhytomyr', 'Sumy', 'Ivano-Frankivsk', 'Ternopil', 'Lutsk', 'Rivne',
+        'Khmelnytskyi', 'Uzhhorod', 'Kremenchuk', 'Kropyvnytskyi',
+    ],
+    'україна': [
+        'Kyiv', 'Lviv', 'Kharkiv', 'Odessa', 'Dnipro', 'Zaporizhzhia',
+        'Vinnytsia', 'Mykolaiv', 'Poltava', 'Chernivtsi', 'Cherkasy',
+        'Zhytomyr', 'Sumy', 'Ivano-Frankivsk', 'Ternopil', 'Lutsk', 'Rivne',
+        'Khmelnytskyi', 'Uzhhorod', 'Kremenchuk', 'Kropyvnytskyi',
+    ],
+
+    # Romania
+    'romania': [
+        'Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova',
+        'Brașov', 'Galați', 'Ploiești', 'Oradea', 'Brăila', 'Arad', 'Pitești',
+        'Sibiu', 'Bacău', 'Târgu Mureș', 'Baia Mare', 'Buzău', 'Botoșani',
+        'Satu Mare', 'Râmnicu Vâlcea', 'Drobeta-Turnu Severin', 'Suceava',
+        'Piatra Neamț', 'Deva', 'Focșani', 'Alba Iulia', 'Bistrița', 'Tulcea',
+        'Reșița', 'Câmpina',
+    ],
+    'românia': [
+        'Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova',
+        'Brașov', 'Galați', 'Ploiești', 'Oradea', 'Brăila', 'Arad', 'Pitești',
+        'Sibiu', 'Bacău', 'Târgu Mureș', 'Baia Mare', 'Buzău', 'Botoșani',
+        'Satu Mare', 'Râmnicu Vâlcea', 'Drobeta-Turnu Severin', 'Suceava',
+        'Piatra Neamț', 'Deva', 'Focșani', 'Alba Iulia', 'Bistrița', 'Tulcea',
+        'Reșița', 'Câmpina',
+    ],
+
+    # Latvia
+    'latvia': [
+        'Riga', 'Daugavpils', 'Liepāja', 'Jelgava', 'Jūrmala', 'Ventspils',
+        'Rēzekne', 'Valmiera', 'Ogre', 'Tukums', 'Salaspils',
+    ],
+    'latvija': [
+        'Riga', 'Daugavpils', 'Liepāja', 'Jelgava', 'Jūrmala', 'Ventspils',
+        'Rēzekne', 'Valmiera', 'Ogre', 'Tukums', 'Salaspils',
+    ],
+
+    # Lithuania
+    'lithuania': [
+        'Vilnius', 'Kaunas', 'Klaipėda', 'Šiauliai', 'Panevėžys', 'Alytus',
+        'Marijampolė', 'Mažeikiai', 'Jonava', 'Utena', 'Kėdainiai', 'Telšiai',
+        'Ukmergė', 'Visaginas',
+    ],
+    'lietuva': [
+        'Vilnius', 'Kaunas', 'Klaipėda', 'Šiauliai', 'Panevėžys', 'Alytus',
+        'Marijampolė', 'Mažeikiai', 'Jonava', 'Utena', 'Kėdainiai', 'Telšiai',
+        'Ukmergė', 'Visaginas',
+    ],
+
+    # Hungary
+    'hungary': [
+        'Budapest', 'Debrecen', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza',
+        'Kecskemét', 'Székesfehérvár', 'Szombathely', 'Szolnok', 'Tatabánya',
+        'Kaposvár', 'Érd', 'Veszprém', 'Eger', 'Sopron', 'Zalaegerszeg',
+        'Szeged', 'Ózd', 'Hódmezővásárhely', 'Dunaújváros', 'Mosonmagyaróvár',
+    ],
+    'magyarország': [
+        'Budapest', 'Debrecen', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza',
+        'Kecskemét', 'Székesfehérvár', 'Szombathely', 'Szolnok', 'Tatabánya',
+        'Kaposvár', 'Érd', 'Veszprém', 'Eger', 'Sopron', 'Zalaegerszeg',
+        'Szeged', 'Ózd', 'Hódmezővásárhely', 'Dunaújváros', 'Mosonmagyaróvár',
+    ],
+
+    # Slovakia
+    'slovakia': [
+        'Bratislava', 'Košice', 'Prešov', 'Žilina', 'Nitra', 'Banská Bystrica',
+        'Trnava', 'Martin', 'Trenčín', 'Poprad', 'Prievidza', 'Považská Bystrica',
+        'Zvolen', 'Michalovce', 'Nové Zámky', 'Spišská Nová Ves', 'Komárno',
+        'Levice', 'Liptovský Mikuláš', 'Humenné', 'Bardejov', 'Rimavská Sobota',
+    ],
+    'slovensko': [
+        'Bratislava', 'Košice', 'Prešov', 'Žilina', 'Nitra', 'Banská Bystrica',
+        'Trnava', 'Martin', 'Trenčín', 'Poprad', 'Prievidza', 'Považská Bystrica',
+        'Zvolen', 'Michalovce', 'Nové Zámky', 'Spišská Nová Ves', 'Komárno',
+        'Levice', 'Liptovský Mikuláš', 'Humenné', 'Bardejov', 'Rimavská Sobota',
+    ],
+
+    # Germany
+    'germany': [
+        'Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart',
+        'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen', 'Dresden',
+        'Hanover', 'Nuremberg', 'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld',
+        'Bonn', 'Münster', 'Karlsruhe', 'Mannheim', 'Augsburg', 'Wiesbaden',
+        'Gelsenkirchen', 'Mönchengladbach', 'Braunschweig', 'Kiel', 'Chemnitz',
+        'Aachen', 'Halle', 'Magdeburg', 'Freiburg', 'Krefeld', 'Lübeck',
+        'Mainz', 'Erfurt', 'Rostock',
+    ],
+    'deutschland': [
+        'Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart',
+        'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen', 'Dresden',
+        'Hanover', 'Nuremberg', 'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld',
+        'Bonn', 'Münster', 'Karlsruhe', 'Mannheim', 'Augsburg', 'Wiesbaden',
+        'Gelsenkirchen', 'Mönchengladbach', 'Braunschweig', 'Kiel', 'Chemnitz',
+        'Aachen', 'Halle', 'Magdeburg', 'Freiburg', 'Krefeld', 'Lübeck',
+        'Mainz', 'Erfurt', 'Rostock',
+    ],
+
+    # Austria
+    'austria': [
+        'Vienna', 'Graz', 'Linz', 'Salzburg', 'Innsbruck', 'Klagenfurt',
+        'Villach', 'Wels', 'St. Pölten', 'Dornbirn', 'Wiener Neustadt',
+        'Steyr', 'Feldkirch', 'Bregenz', 'Leonding',
+    ],
+    'österreich': [
+        'Vienna', 'Graz', 'Linz', 'Salzburg', 'Innsbruck', 'Klagenfurt',
+        'Villach', 'Wels', 'St. Pölten', 'Dornbirn', 'Wiener Neustadt',
+        'Steyr', 'Feldkirch', 'Bregenz', 'Leonding',
+    ],
+
+    # Finland
+    'finland': [
+        'Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Oulu', 'Turku',
+        'Jyväskylä', 'Lahti', 'Kuopio', 'Pori', 'Kouvola', 'Joensuu',
+        'Lappeenranta', 'Hämeenlinna', 'Vaasa', 'Rovaniemi', 'Seinäjoki',
+        'Mikkeli', 'Kotka', 'Porvoo',
+    ],
+    'suomi': [
+        'Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Oulu', 'Turku',
+        'Jyväskylä', 'Lahti', 'Kuopio', 'Pori', 'Kouvola', 'Joensuu',
+        'Lappeenranta', 'Hämeenlinna', 'Vaasa', 'Rovaniemi', 'Seinäjoki',
+        'Mikkeli', 'Kotka', 'Porvoo',
+    ],
+
+    # Norway
+    'norway': [
+        'Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Drammen', 'Fredrikstad',
+        'Kristiansand', 'Sandnes', 'Tromsø', 'Sarpsborg', 'Skien', 'Ålesund',
+        'Sandefjord', 'Haugesund', 'Tønsberg', 'Moss', 'Porsgrunn', 'Bodø',
+        'Arendal',
+    ],
+    'norge': [
+        'Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Drammen', 'Fredrikstad',
+        'Kristiansand', 'Sandnes', 'Tromsø', 'Sarpsborg', 'Skien', 'Ålesund',
+        'Sandefjord', 'Haugesund', 'Tønsberg', 'Moss', 'Porsgrunn', 'Bodø',
+        'Arendal',
+    ],
+
+    # Sweden
+    'sweden': [
+        'Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Västerås', 'Örebro',
+        'Linköping', 'Helsingborg', 'Jönköping', 'Norrköping', 'Lund', 'Umeå',
+        'Gävle', 'Borås', 'Södertälje', 'Eskilstuna', 'Halmstad', 'Växjö',
+        'Karlstad', 'Sundsvall',
+    ],
+    'sverige': [
+        'Stockholm', 'Gothenburg', 'Malmö', 'Uppsala', 'Västerås', 'Örebro',
+        'Linköping', 'Helsingborg', 'Jönköping', 'Norrköping', 'Lund', 'Umeå',
+        'Gävle', 'Borås', 'Södertälje', 'Eskilstuna', 'Halmstad', 'Växjö',
+        'Karlstad', 'Sundsvall',
+    ],
+
+    # Denmark
+    'denmark': [
+        'Copenhagen', 'Aarhus', 'Odense', 'Aalborg', 'Esbjerg', 'Randers',
+        'Kolding', 'Horsens', 'Vejle', 'Roskilde', 'Helsingør', 'Silkeborg',
+        'Næstved', 'Fredericia', 'Viborg',
+    ],
+    'danmark': [
+        'Copenhagen', 'Aarhus', 'Odense', 'Aalborg', 'Esbjerg', 'Randers',
+        'Kolding', 'Horsens', 'Vejle', 'Roskilde', 'Helsingør', 'Silkeborg',
+        'Næstved', 'Fredericia', 'Viborg',
+    ],
+
+    # Greece
+    'greece': [
+        'Athens', 'Thessaloniki', 'Patras', 'Piraeus', 'Larissa', 'Heraklion',
+        'Peristeri', 'Kallithea', 'Acharnes', 'Kalamaria', 'Nikaia', 'Glyfada',
+        'Rhodes', 'Volos', 'Ioannina', 'Chalandri', 'Nea Ionia', 'Ilioupoli',
+        'Keratsini',
+    ],
+    'ελλάδα': [
+        'Athens', 'Thessaloniki', 'Patras', 'Piraeus', 'Larissa', 'Heraklion',
+        'Peristeri', 'Kallithea', 'Acharnes', 'Kalamaria', 'Nikaia', 'Glyfada',
+        'Rhodes', 'Volos', 'Ioannina', 'Chalandri', 'Nea Ionia', 'Ilioupoli',
+        'Keratsini',
+    ],
+
+    # Israel
+    'israel': [
+        'Tel Aviv', 'Jerusalem', 'Haifa', 'Rishon LeZion', 'Petah Tikva',
+        'Ashdod', 'Netanya', 'Beer Sheva', 'Bnei Brak', 'Holon', 'Ramat Gan',
+        'Ashkelon', 'Rehovot', 'Bat Yam', 'Herzliya', 'Kfar Saba', "Ra'anana",
+        'Nazareth', 'Modiin',
+    ],
+
+    # Serbia
+    'serbia': [
+        'Belgrade', 'Novi Sad', 'Niš', 'Kragujevac', 'Subotica', 'Zrenjanin',
+        'Pančevo', 'Čačak', 'Novi Pazar', 'Kruševac', 'Vranje', 'Šabac',
+        'Jagodina', 'Smederevo', 'Valjevo',
+    ],
+    'srbija': [
+        'Belgrade', 'Novi Sad', 'Niš', 'Kragujevac', 'Subotica', 'Zrenjanin',
+        'Pančevo', 'Čačak', 'Novi Pazar', 'Kruševac', 'Vranje', 'Šabac',
+        'Jagodina', 'Smederevo', 'Valjevo',
+    ],
+
+    # Croatia
+    'croatia': [
+        'Zagreb', 'Split', 'Rijeka', 'Osijek', 'Zadar', 'Pula',
+        'Slavonski Brod', 'Karlovac', 'Varaždin', 'Šibenik', 'Sisak', 'Vukovar',
+    ],
+    'hrvatska': [
+        'Zagreb', 'Split', 'Rijeka', 'Osijek', 'Zadar', 'Pula',
+        'Slavonski Brod', 'Karlovac', 'Varaždin', 'Šibenik', 'Sisak', 'Vukovar',
+    ],
+
+    # Bulgaria
+    'bulgaria': [
+        'Sofia', 'Plovdiv', 'Varna', 'Burgas', 'Ruse', 'Stara Zagora',
+        'Pleven', 'Sliven', 'Dobrich', 'Shumen', 'Pernik', 'Haskovo',
+        'Yambol', 'Pazardzhik',
+    ],
+    'българия': [
+        'Sofia', 'Plovdiv', 'Varna', 'Burgas', 'Ruse', 'Stara Zagora',
+        'Pleven', 'Sliven', 'Dobrich', 'Shumen', 'Pernik', 'Haskovo',
+        'Yambol', 'Pazardzhik',
+    ],
+}
+
 
 def _get_sub_queries(location: str, query_term: str) -> list[str]:
     """
@@ -86,6 +385,20 @@ def _get_sub_queries(location: str, query_term: str) -> list[str]:
     if districts:
         return [f'{query_term} in {d}' for d in districts]
     return [f'{query_term} in {location}']
+
+
+def _get_location_queries(location: str, query_term: str) -> list[str]:
+    """
+    If location matches a known country, return one query per major city.
+    Otherwise fall back to district-level splitting for large cities,
+    or a single query for everything else.
+    """
+    key = location.strip().lower().split(',')[0].strip()
+    cities = COUNTRY_CITIES.get(key)
+    if cities:
+        return [f'{query_term} in {city}' for city in cities]
+    return _get_sub_queries(location, query_term)
+
 
 # Fields to request from Outscraper (no fields filter = get everything)
 OUTSCRAPER_FIELDS = (
@@ -286,7 +599,7 @@ def scrape_google_maps(
 
     for idx, btype in enumerate(types_to_scrape, 1):
         query_term = BUSINESS_TYPE_QUERIES.get(btype, btype)
-        sub_queries = _get_sub_queries(location, query_term)
+        sub_queries = _get_location_queries(location, query_term)
         total_sub = len(sub_queries)
         is_district_mode = total_sub > 1
 
@@ -298,10 +611,10 @@ def scrape_google_maps(
             job['progress'] = max(5, pct_base + pct_inner)
 
             if is_district_mode:
-                district = query.split(' in ', 1)[-1]
+                city_name = query.split(' in ', 1)[-1]
                 job['message'] = (
-                    f'{query_term.capitalize()}: district {q_idx}/{total_sub} — {district}'
-                    f' ({len(all_records)} found so far)'
+                    f'{query_term.capitalize()}: {city_name} ({q_idx}/{total_sub})'
+                    f' — {len(all_records)} found so far'
                 )
             else:
                 job['message'] = f'Fetching {query_term} from Google Maps... (~30s)'
