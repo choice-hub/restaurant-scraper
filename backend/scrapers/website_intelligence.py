@@ -21,143 +21,280 @@ HEADERS = {
 }
 
 PLATFORM_SIGNS = {
-    "ChoiceQR":    ["choiceqr.com"],
-    "Dish":        ["dish.co", "getdish"],
+    "ChoiceQR":     ["choiceqr.com"],
+    "Dish":         ["dish.co", "getdish"],
     "Restaurantic": ["restaurantic"],
-    "Squarespace": ["squarespace"],
-    "Wix":         ["wixsite", "wix.com"],
-    "WordPress":   ["wp-content", "wp-includes", "wp-json"],
-    "Webflow":     ["webflow.io"],
-    "Lightspeed":  ["lightspeedapp"],
-    "Shopify":     ["shopify", "myshopify"],
+    "Squarespace":  ["squarespace"],
+    "Wix":          ["wixsite", "wix.com"],
+    "WordPress":    ["wp-content", "wp-includes", "wp-json"],
+    "Webflow":      ["webflow.io"],
+    "Lightspeed":   ["lightspeedapp"],
+    "Shopify":      ["shopify", "myshopify"],
+    "Strikingly":   ["strikingly.com"],
+    "GoDaddy":      ["godaddy", "secureserver.net"],
 }
 
-RESERVATION_SIGNS = {
-    "OpenTable":   ["opentable.com"],
-    "TheFork":     ["thefork.com", "lafourchette"],
-    "Resy":        ["resy.com"],
-    "Quandoo":     ["quandoo.com"],
-    "SevenRooms":  ["sevenrooms.com"],
-    "Tock":        ["exploretock.com"],
-    "ResDiary":    ["resdiary.com"],
-    "Bookio":      ["bookio.com"],
+# iframe / script src patterns that confirm an EMBEDDED reservation widget
+RESERVATION_PROVIDERS = {
+    "OpenTable":  ["opentable.com"],
+    "TheFork":    ["thefork.com", "lafourchette.com"],
+    "Resy":       ["resy.com"],
+    "Quandoo":    ["quandoo.com"],
+    "SevenRooms": ["sevenrooms.com"],
+    "Tock":       ["exploretock.com"],
+    "ResDiary":   ["resdiary.com"],
+    "Bookio":     ["bookio.com"],
+    "Restaumatic":["restaumatic.com"],
+    "TableAgent": ["tableagent.com"],
+    "Yelp":       ["yelp.com/reservations"],
+    "Tablein":    ["tablein.com"],
 }
 
-ORDERING_SIGNS = {
-    "Wolt":        ["wolt.com"],
-    "Uber Eats":   ["ubereats.com"],
-    "Deliveroo":   ["deliveroo"],
-    "Bolt Food":   ["bolt.eu"],
-    "Just Eat":    ["just-eat"],
-    "Glovo":       ["glovoapp"],
-    "ChoiceQR":    ["choiceqr.com"],
+# href / iframe / script patterns that confirm an EMBEDDED ordering widget on the site
+# External links to delivery apps (wolt.com/restaurant/xyz) do NOT count
+ORDERING_PROVIDERS = {
+    "ChoiceQR":  ["choiceqr.com/order", "choiceqr.com/menu"],
+    "Dish":      ["dish.co/order"],
+    "Flipdish":  ["flipdish.com", "flipdish.co"],
+    "Ordify":    ["ordify.com"],
+    "Bopple":    ["bopple.com"],
+    "Yumbi":     ["yumbi.com"],
+    "Doshii":    ["doshii.io"],
+    "HungryHungry": ["hungryhungry.com"],
+    "Lightspeed": ["lightspeedapp.com/order"],
+    "Square":    ["squareup.com/order", "squareonlinestore.com"],
+    "Wix Order": ["wixrestaurants.com"],
 }
 
-LEGAL_SUBPAGES = [
-    "/about", "/about-us", "/contact", "/contact-us",
-    "/legal", "/impressum", "/gdpr", "/terms", "/privacy",
-    "/datenschutz", "/o-nas", "/kontakt",
+# Keywords in link text/href suggesting a reservation link to follow
+RESERVATION_LINK_KEYWORDS = [
+    "rezerv", "reserv", "book", "stol", "tisch", "table",
+    "prenota", "réserv", "boek", "réserver", "boeking",
+]
+
+# Keywords in link text/href suggesting external delivery (NOT embedded ordering)
+DELIVERY_EXTERNAL_KEYWORDS = [
+    "wolt.com", "bolt.eu", "ubereats.com", "deliveroo",
+    "just-eat", "glovoapp", "foodora", "lieferando",
 ]
 
 
-def _compact_html(soup: BeautifulSoup, url: str) -> str:
-    """Build a compact text representation of the page for Claude analysis."""
-    parts = []
+# ── Deterministic detectors ────────────────────────────────────────────────────
 
-    # All anchor links
+def _detect_platform(soup: BeautifulSoup, page_html: str) -> str:
+    html_lower = page_html.lower()
+    # Check asset URLs (scripts/links) and inline text
+    for platform, signs in PLATFORM_SIGNS.items():
+        if any(s in html_lower for s in signs):
+            return platform
+    return "custom"
+
+
+def _scan_for_provider(sources: list[str], provider_dict: dict) -> str:
+    """Return the first provider name whose signature appears in any of the sources."""
+    combined = " ".join(s.lower() for s in sources if s)
+    for provider, signs in provider_dict.items():
+        if any(s in combined for s in signs):
+            return provider
+    return ""
+
+
+def _get_all_srcs(soup: BeautifulSoup) -> list[str]:
+    """Collect all iframe srcs + script srcs from a parsed page."""
+    srcs = []
+    for tag in soup.find_all(["iframe", "script", "a"], src=True):
+        srcs.append(tag.get("src", ""))
+    for a in soup.find_all("a", href=True):
+        srcs.append(a["href"])
+    return srcs
+
+
+def _find_reservation(homepage_soup: BeautifulSoup, base_url: str, client: httpx.Client) -> tuple[bool, str]:
+    """
+    Returns (has_reservation, provider_name).
+    Follows internal reservation links one level deep to find booking iframes.
+    """
+    # 1 — Check iframes/scripts on homepage directly
+    provider = _scan_for_provider(_get_all_srcs(homepage_soup), RESERVATION_PROVIDERS)
+    if provider:
+        return True, provider
+
+    # 2 — Find reservation-related links and follow them
+    visited = set()
+    for a in homepage_soup.find_all("a", href=True):
+        href = a["href"]
+        text = a.get_text(strip=True).lower()
+        href_lower = href.lower()
+
+        if not any(kw in text + href_lower for kw in RESERVATION_LINK_KEYWORDS):
+            continue
+
+        # External link → check directly
+        if href_lower.startswith("http"):
+            provider = _scan_for_provider([href], RESERVATION_PROVIDERS)
+            if provider:
+                return True, provider
+            continue
+
+        # Internal link → fetch and scan
+        sub_url = urljoin(base_url, href)
+        if sub_url in visited:
+            continue
+        visited.add(sub_url)
+
+        try:
+            res = client.get(sub_url, headers=HEADERS, timeout=10, follow_redirects=True)
+            if res.status_code != 200:
+                continue
+            sub_soup = BeautifulSoup(res.text, "html.parser")
+            srcs = _get_all_srcs(sub_soup)
+            provider = _scan_for_provider(srcs, RESERVATION_PROVIDERS)
+            if provider:
+                return True, provider
+            # Even if no known provider, if there's a booking iframe → custom
+            for s in srcs:
+                if "iframe" in s or "booking" in s.lower() or "widget" in s.lower():
+                    return True, "custom"
+        except Exception:
+            pass
+
+    # 3 — Did we find a reservation link at all (even without a known provider)?
+    for a in homepage_soup.find_all("a", href=True):
+        text = a.get_text(strip=True).lower()
+        href = a["href"].lower()
+        if any(kw in text + href for kw in RESERVATION_LINK_KEYWORDS):
+            return True, ""   # has reservation but unknown provider
+
+    return False, ""
+
+
+def _find_ordering(homepage_soup: BeautifulSoup) -> tuple[bool, str]:
+    """
+    Returns (has_ordering, provider_name).
+    Only returns True for EMBEDDED ordering widgets — not links to external delivery apps.
+    """
+    # Check iframes and scripts for known embedded ordering providers
+    srcs = []
+    for tag in homepage_soup.find_all(["iframe", "script"], src=True):
+        srcs.append(tag.get("src", ""))
+    provider = _scan_for_provider(srcs, ORDERING_PROVIDERS)
+    if provider:
+        return True, provider
+
+    # Check page HTML for ordering widget signatures
+    html = homepage_soup.decode_contents().lower()
+    provider = _scan_for_provider([html], ORDERING_PROVIDERS)
+    if provider:
+        return True, provider
+
+    return False, ""
+
+
+def _extract_legal_regex(text: str) -> dict:
+    """Fast regex pass for common legal registration patterns."""
+    result = {"legal_name": "", "company_id": "", "ico": ""}
+
+    # Czech / Slovak IČO (always 8 digits)
+    m = re.search(r"IČ[OO]?:?\s*(\d{8})", text, re.IGNORECASE)
+    if m:
+        result["ico"] = m.group(1)
+
+    # German HRB / HRA
+    m = re.search(r"(HRB|HRA)\s*(\d+)", text)
+    if m:
+        result["company_id"] = m.group(0)
+
+    # Generic "Company No." / "Reg No."
+    if not result["company_id"]:
+        m = re.search(
+            r"(?:Company|Registration|Reg)\.?\s*No\.?:?\s*([\w\d\s/-]{3,20})",
+            text, re.IGNORECASE
+        )
+        if m:
+            result["company_id"] = m.group(1).strip()
+
+    # Legal entity name (s.r.o., a.s., GmbH, Ltd., etc.)
+    m = re.search(
+        r"([^\n,;|·–—]{2,60}?\b(?:s\.r\.o\.|a\.s\.|spol\.\s*s\s*r\.o\.|s\.p\.|"
+        r"GmbH|Ltd\.|LLC|Inc\.|S\.A\.|S\.L\.|B\.V\.|N\.V\.))",
+        text,
+    )
+    if m:
+        result["legal_name"] = m.group(1).strip()
+
+    return result
+
+
+# ── Claude (only for social + email) ──────────────────────────────────────────
+
+def _analyze_social_email(name: str, url: str, soup: BeautifulSoup) -> dict:
+    """Use Claude Haiku to extract Instagram URL, Facebook URL, and email addresses."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {}
+
+    # Build a compact link + text snippet for Claude
     links = []
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
-        text = a.get_text(strip=True)[:80]
+        text = a.get_text(strip=True)[:60]
         if href:
             links.append(f"{text}: {href}")
-    if links:
-        parts.append("LINKS:\n" + "\n".join(links[:200]))
 
-    # Script sources (platform fingerprinting)
-    script_srcs = [s.get("src", "") for s in soup.find_all("script") if s.get("src")]
-    link_hrefs  = [l.get("href", "") for l in soup.find_all("link") if l.get("href")]
-    all_assets  = script_srcs + link_hrefs
-    if all_assets:
-        parts.append("ASSET URLS:\n" + "\n".join(all_assets[:50]))
-
-    # Footer (most important for platform + legal clues)
     footer = (
         soup.find("footer")
         or soup.find(id=re.compile(r"footer", re.I))
         or soup.find(class_=re.compile(r"footer", re.I))
     )
-    if footer:
-        parts.append("FOOTER:\n" + footer.get_text(" ", strip=True)[:1200])
-
-    # Iframes (reservation / ordering embeds)
-    iframes = [f.get("src", "") for f in soup.find_all("iframe") if f.get("src")]
-    if iframes:
-        parts.append("IFRAMES:\n" + "\n".join(iframes[:20]))
-
-    # Page text
+    footer_text = footer.get_text(" ", strip=True)[:800] if footer else ""
     page_text = soup.get_text(" ", strip=True)
-    parts.append("PAGE TEXT:\n" + page_text[:2500])
 
-    return "\n\n".join(parts)[:9000]
+    context = (
+        f"LINKS:\n" + "\n".join(links[:150]) +
+        f"\n\nFOOTER:\n{footer_text}" +
+        f"\n\nPAGE TEXT (excerpt):\n{page_text[:1500]}"
+    )[:7000]
 
-
-def _analyze_with_claude(name: str, url: str, compact_html: str) -> dict:
-    """Use Claude Haiku to extract structured data from the website HTML."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return {}
-
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-    except ImportError:
-        return {}
-
-    prompt = f"""Analyze this restaurant website data and return ONLY a valid JSON object with these exact fields:
+    prompt = f"""Find the Instagram profile URL, Facebook page URL, and contact email addresses for this restaurant.
+Return ONLY a JSON object:
 
 {{
-  "instagram_url": "full URL starting with https://instagram.com/... or null",
-  "facebook_url": "full URL starting with https://facebook.com/... or null",
-  "emails": ["array of email addresses found, e.g. info@restaurant.com"],
-  "website_platform": "one of: ChoiceQR, Dish, Restaurantic, WordPress, Wix, Squarespace, Webflow, Shopify, Lightspeed, custom, unknown",
-  "reservation_possible": true or false,
-  "reservation_provider": "provider name or null if none/phone-only",
-  "ordering_possible": true or false,
-  "ordering_provider": "provider name or null"
+  "instagram_url": "full URL or null",
+  "facebook_url": "full URL or null",
+  "emails": ["list of contact email addresses, e.g. info@place.com"]
 }}
 
-Detection hints:
-- Instagram: look for instagram.com/ in links
-- Facebook: look for facebook.com/ in links
-- Emails: look for mailto: links and email@domain.com patterns
-- Platform: check FOOTER text for "Powered by X", "Created by X"; check ASSET URLS for choiceqr.com, wp-content, wixsite, squarespace, webflow.io, shopify, dish.co, lightspeedapp
-- Reservation: check LINKS and IFRAMES for opentable.com, thefork.com, resy.com, quandoo.com, sevenrooms.com, exploretock.com, resdiary.com, bookio.com; also text clues like "Reserve a table", "Book a table"
-- Ordering: check LINKS and IFRAMES for wolt.com, ubereats.com, deliveroo, bolt.eu, just-eat, glovoapp, choiceqr.com; text like "Order online", "Order now"
-- If reservation/ordering button just says "call us" or shows only a phone number, set possible=false
+Rules:
+- instagram_url must start with https://instagram.com/ or https://www.instagram.com/
+- facebook_url must start with https://facebook.com/ or https://www.facebook.com/
+- Only include business contact emails, not personal or staff emails
+- Return null / empty array if not found
 
 Restaurant: {name}
 URL: {url}
 
-{compact_html}
+{context}
 
-Return JSON only, no explanation:"""
+JSON only:"""
 
     try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=600,
+            max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
         text = response.content[0].text.strip()
-        # Strip markdown code fences if present
         text = re.sub(r"^```[a-z]*\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
         return json.loads(text)
     except Exception as e:
-        logger.warning("Claude analysis failed for %s: %s", url, e)
+        logger.warning("Claude social/email failed for %s: %s", url, e)
         return {}
 
+
+# ── Follower counts ────────────────────────────────────────────────────────────
 
 def _format_count(n: int) -> str:
     if n >= 1_000_000:
@@ -168,37 +305,29 @@ def _format_count(n: int) -> str:
 
 
 def _get_instagram_followers(ig_url: str, client: httpx.Client) -> str:
-    """Attempt to get Instagram follower count from a public profile."""
     try:
-        # Extract username from URL
-        username = ig_url.rstrip("/").rstrip("?").split("/")[-1].split("?")[0]
+        username = ig_url.rstrip("/").split("/")[-1].split("?")[0]
         if not username or username.lower() in ("instagram", "p", "reel", "explore", "stories"):
             return "Unknown"
 
-        # Try instaloader (best approach, pure Python)
         try:
             import instaloader
-            L = instaloader.Instaloader(quiet=True, download_pictures=False,
-                                        download_videos=False, download_video_thumbnails=False,
-                                        download_geotags=False, download_comments=False,
-                                        save_metadata=False)
+            L = instaloader.Instaloader(
+                quiet=True, download_pictures=False, download_videos=False,
+                download_video_thumbnails=False, download_geotags=False,
+                download_comments=False, save_metadata=False,
+            )
             profile = instaloader.Profile.from_username(L.context, username)
             return _format_count(profile.followers)
         except Exception:
             pass
 
-        # Fallback: fetch profile page, look for count in embedded JSON
         res = client.get(
             f"https://www.instagram.com/{username}/",
-            headers=HEADERS,
-            timeout=10,
-            follow_redirects=True,
+            headers=HEADERS, timeout=10, follow_redirects=True,
         )
-        for pattern in [
-            r'"edge_followed_by":\{"count":(\d+)\}',
-            r'"follower_count":(\d+)',
-        ]:
-            m = re.search(pattern, res.text)
+        for pat in [r'"edge_followed_by":\{"count":(\d+)\}', r'"follower_count":(\d+)']:
+            m = re.search(pat, res.text)
             if m:
                 return _format_count(int(m.group(1)))
 
@@ -208,15 +337,11 @@ def _get_instagram_followers(ig_url: str, client: httpx.Client) -> str:
 
 
 def _get_facebook_followers(fb_url: str, client: httpx.Client) -> str:
-    """Attempt to get Facebook page follower count."""
     try:
         res = client.get(fb_url, headers=HEADERS, timeout=10, follow_redirects=True)
-        for pattern in [
-            r'"follower_count":(\d+)',
-            r'"followers_count":(\d+)',
-            r'([\d,]+)\s+(?:people\s+)?(?:follow|followers)',
-        ]:
-            m = re.search(pattern, res.text, re.IGNORECASE)
+        for pat in [r'"follower_count":(\d+)', r'"followers_count":(\d+)',
+                    r'([\d,]+)\s+(?:people\s+)?(?:follow|followers)']:
+            m = re.search(pat, res.text, re.IGNORECASE)
             if m:
                 raw = m.group(1).replace(",", "")
                 try:
@@ -228,68 +353,9 @@ def _get_facebook_followers(fb_url: str, client: httpx.Client) -> str:
         return f"Error: {str(e)[:60]}"
 
 
-def _get_legal_data(base_url: str, client: httpx.Client) -> dict:
-    """Fetch sub-pages and use Claude to extract company registration info."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        return {"legal_name": "", "company_id": "", "ico": ""}
-
-    combined_text = ""
-    tried = 0
-    legal_keywords = {"ičo", "ico", "company", "registered", "reg no", "ltd",
-                      "s.r.o", "gmbh", "legal", "org.nr", "impressum", "kvk"}
-
-    for path in LEGAL_SUBPAGES:
-        if tried >= 3:
-            break
-        try:
-            url = urljoin(base_url, path)
-            res = client.get(url, headers=HEADERS, timeout=8, follow_redirects=True)
-            if res.status_code != 200:
-                continue
-            soup = BeautifulSoup(res.text, "html.parser")
-            text = soup.get_text(" ", strip=True)
-            text_lower = text.lower()
-            if any(kw in text_lower for kw in legal_keywords):
-                combined_text += f"\n\n--- {path} ---\n{text[:2500]}"
-                tried += 1
-        except Exception:
-            continue
-
-    if not combined_text:
-        return {"legal_name": "", "company_id": "", "ico": ""}
-
-    try:
-        import anthropic
-        claude = anthropic.Anthropic(api_key=api_key)
-        prompt = f"""Extract legal/company registration info from this restaurant website text.
-Return ONLY a JSON object with these fields:
-{{
-  "legal_name": "official registered company name or empty string",
-  "company_id": "company registration number or empty string",
-  "ico": "IČO number (Czech/Slovak) or empty string"
-}}
-
-Text:
-{combined_text[:5000]}
-
-JSON only:"""
-        response = claude.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        text = response.content[0].text.strip()
-        text = re.sub(r"^```[a-z]*\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-        return json.loads(text)
-    except Exception as e:
-        logger.warning("Legal extraction failed for %s: %s", base_url, e)
-        return {"legal_name": "", "company_id": "", "ico": ""}
-
+# ── Main per-restaurant function ───────────────────────────────────────────────
 
 def analyze_restaurant(name: str, url: str, orig_data: dict = None) -> dict:
-    """Analyze a single restaurant website and return a flat result dict."""
     result = {
         "_orig": orig_data or {},
         "name": name,
@@ -316,6 +382,7 @@ def analyze_restaurant(name: str, url: str, orig_data: dict = None) -> dict:
 
     try:
         with httpx.Client(timeout=15, follow_redirects=True) as client:
+
             # 1 — Fetch homepage
             try:
                 res = client.get(url, headers=HEADERS)
@@ -325,40 +392,51 @@ def analyze_restaurant(name: str, url: str, orig_data: dict = None) -> dict:
                 return result
 
             soup = BeautifulSoup(res.text, "html.parser")
-            compact = _compact_html(soup, url)
+            page_html = res.text
+            page_text = soup.get_text(" ", strip=True)
 
-            # 2 — Claude analysis (homepage)
+            # 2 — Platform detection (deterministic)
+            result["website_platform"] = _detect_platform(soup, page_html)
+
+            # 3 — Reservation (follow links, scan iframes)
+            has_res, res_provider = _find_reservation(soup, url, client)
+            result["reservation_possible"]  = "Yes" if has_res else "No"
+            result["reservation_provider"]  = res_provider
+
+            # 4 — Ordering (embedded widget only — external delivery links don't count)
+            has_ord, ord_provider = _find_ordering(soup)
+            result["ordering_possible"]  = "Yes" if has_ord else "No"
+            result["ordering_provider"]  = ord_provider
+
+            # 5 — Legal: regex first, then Claude on sub-pages if nothing found
+            legal = _extract_legal_regex(page_text)
+            if not any(legal.values()):
+                # Try footer specifically
+                footer = soup.find("footer") or soup.find(class_=re.compile(r"footer", re.I))
+                if footer:
+                    legal = _extract_legal_regex(footer.get_text(" ", strip=True))
+            if not any(legal.values()):
+                legal = _extract_legal_from_subpages(url, client)
+            result["legal_name"]  = legal.get("legal_name", "")
+            result["company_id"]  = legal.get("company_id", "")
+            result["ico"]         = legal.get("ico", "")
+
+            # 6 — Social + email via Claude
             try:
-                cd = _analyze_with_claude(name, url, compact)
+                cd = _analyze_social_email(name, url, soup)
                 if cd:
-                    result["instagram_url"]     = cd.get("instagram_url") or ""
-                    result["facebook_url"]       = cd.get("facebook_url") or ""
+                    result["instagram_url"] = cd.get("instagram_url") or ""
+                    result["facebook_url"]  = cd.get("facebook_url") or ""
                     emails = cd.get("emails", [])
-                    result["emails"]             = ", ".join(emails) if isinstance(emails, list) else str(emails or "")
-                    result["website_platform"]   = cd.get("website_platform") or ""
-                    result["reservation_possible"] = "Yes" if cd.get("reservation_possible") else "No"
-                    result["reservation_provider"] = cd.get("reservation_provider") or ""
-                    result["ordering_possible"]   = "Yes" if cd.get("ordering_possible") else "No"
-                    result["ordering_provider"]   = cd.get("ordering_provider") or ""
+                    result["emails"] = ", ".join(emails) if isinstance(emails, list) else str(emails or "")
             except Exception as e:
-                result["notes"] = f"AI analysis error: {str(e)[:80]}"
+                result["notes"] = f"AI error: {str(e)[:80]}"
 
-            # 3 — Instagram follower count
+            # 7 — Follower counts
             if result["instagram_url"]:
                 result["instagram_followers"] = _get_instagram_followers(result["instagram_url"], client)
-
-            # 4 — Facebook follower count
             if result["facebook_url"]:
                 result["facebook_followers"] = _get_facebook_followers(result["facebook_url"], client)
-
-            # 5 — Legal data from sub-pages
-            try:
-                legal = _get_legal_data(url, client)
-                result["legal_name"]  = legal.get("legal_name", "")
-                result["company_id"]  = legal.get("company_id", "")
-                result["ico"]         = legal.get("ico", "")
-            except Exception:
-                pass
 
     except Exception as e:
         result["notes"] = f"Unexpected error: {str(e)[:150]}"
@@ -366,12 +444,33 @@ def analyze_restaurant(name: str, url: str, orig_data: dict = None) -> dict:
     return result
 
 
-def scrape_website_intel(restaurants: list, job: dict) -> list:
-    """Process a list of restaurants concurrently.
+def _extract_legal_from_subpages(base_url: str, client: httpx.Client) -> dict:
+    """Fetch legal sub-pages and run regex on their text."""
+    SUBPAGES = ["/about", "/about-us", "/contact", "/contact-us",
+                "/legal", "/impressum", "/gdpr", "/terms", "/privacy",
+                "/datenschutz", "/o-nas", "/kontakt"]
+    KEYWORDS = {"ičo", "ico", "company", "registered", "reg no", "ltd",
+                "s.r.o", "gmbh", "impressum", "org.nr", "kvk"}
 
-    restaurants: [{"name": "...", "url": "..."}, ...]
-    job: shared dict with progress/message/scraped keys
-    """
+    for path in SUBPAGES[:5]:
+        try:
+            res = client.get(urljoin(base_url, path), headers=HEADERS, timeout=8, follow_redirects=True)
+            if res.status_code != 200:
+                continue
+            text = BeautifulSoup(res.text, "html.parser").get_text(" ", strip=True)
+            if any(kw in text.lower() for kw in KEYWORDS):
+                legal = _extract_legal_regex(text)
+                if any(legal.values()):
+                    return legal
+        except Exception:
+            continue
+
+    return {"legal_name": "", "company_id": "", "ico": ""}
+
+
+# ── Batch orchestrator ─────────────────────────────────────────────────────────
+
+def scrape_website_intel(restaurants: list, job: dict) -> list:
     total = len(restaurants)
     job["total"] = total
     job["message"] = f"Starting analysis of {total} restaurants..."
@@ -402,5 +501,4 @@ def scrape_website_intel(restaurants: list, job: dict) -> list:
             job["progress"] = int(completed / total * 95)
             job["message"] = f"Analyzed {completed}/{total} restaurants..."
 
-    # Filter out any None gaps (shouldn't happen, but be safe)
     return [r for r in results if r is not None]
