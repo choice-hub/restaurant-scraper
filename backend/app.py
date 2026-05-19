@@ -377,7 +377,9 @@ def run_website_intel_job(job_id: str, restaurants: list, email: str):
                     attachment=job['excel_bytes'],
                     filename=excel_filename,
                 )
-            job['message'] = f'Done! {total} restaurants analyzed. Email sent.'
+                job['message'] = f'Done! {total} restaurants analyzed. Email sent.'
+            else:
+                job['message'] = f'Done! {total} restaurants analyzed.'
         except Exception as mail_err:
             print(f'[Job {job_id}] Email failed: {mail_err}')
             job['message'] = f'Done! {total} restaurants analyzed.'
