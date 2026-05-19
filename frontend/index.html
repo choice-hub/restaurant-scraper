@@ -93,12 +93,12 @@
       <!-- Step 1: Upload CSV -->
       <section class="step">
         <h2><span class="step-num">1</span> Upload Restaurant List</h2>
-        <p class="hint">CSV file with columns: <strong>name</strong> and <strong>url</strong> (or website / link)</p>
+        <p class="hint">Excel or CSV — needs a <strong>url</strong> (or website / link) column. All other columns are kept and new intel columns are added.</p>
         <div class="wi-upload-area" id="wiUploadArea">
-          <input type="file" id="wiFileInput" accept=".csv" style="display:none" />
+          <input type="file" id="wiFileInput" accept=".csv,.xlsx,.xls" style="display:none" />
           <span class="wi-upload-icon">📂</span>
-          <span class="wi-upload-text" id="wiUploadText">Drop CSV here or click to upload</span>
-          <span class="wi-upload-sub">Columns needed: name, url</span>
+          <span class="wi-upload-text" id="wiUploadText">Drop Excel or CSV here, or click to upload</span>
+          <span class="wi-upload-sub">.xlsx · .xls · .csv — all columns are preserved</span>
         </div>
         <div class="wi-preview" id="wiPreview" style="display:none">
           <div class="wi-preview-header">
@@ -296,6 +296,7 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

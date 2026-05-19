@@ -288,9 +288,10 @@ JSON only:"""
         return {"legal_name": "", "company_id": "", "ico": ""}
 
 
-def analyze_restaurant(name: str, url: str) -> dict:
+def analyze_restaurant(name: str, url: str, orig_data: dict = None) -> dict:
     """Analyze a single restaurant website and return a flat result dict."""
     result = {
+        "_orig": orig_data or {},
         "name": name,
         "url": url,
         "instagram_url": "",
@@ -380,7 +381,7 @@ def scrape_website_intel(restaurants: list, job: dict) -> list:
 
     def process_one(idx_item):
         idx, item = idx_item
-        return idx, analyze_restaurant(item.get("name", ""), item.get("url", ""))
+        return idx, analyze_restaurant(item.get("name", ""), item.get("url", ""), item.get("_orig"))
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(process_one, (i, r)): i for i, r in enumerate(restaurants)}

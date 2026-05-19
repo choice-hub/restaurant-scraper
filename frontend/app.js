@@ -470,38 +470,61 @@ document.getElementById('btnRetry').addEventListener('click', () => {
 
 // ── Website Intelligence ──────────────────────────────────────────────────────
 
-function parseCSV(text) {
+// Parse a single CSV line respecting quoted fields
+function _csvLine(line) {
+  const fields = [];
+  let cur = '', inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+    else { cur += ch; }
+  }
+  fields.push(cur.trim());
+  return fields.map(v => v.replace(/^"|"$/g, '').trim());
+}
+
+// CSV text → array of plain objects (all columns preserved)
+function parseCSVToObjects(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return [];
-
-  // Parse a single CSV line respecting quoted fields
-  function parseLine(line) {
-    const fields = [];
-    let cur = '', inQuote = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQuote = !inQuote; }
-      else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
-      else { cur += ch; }
-    }
-    fields.push(cur.trim());
-    return fields;
-  }
-
-  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, '').trim());
-
-  // Find name + url column indices
-  const nameIdx = headers.findIndex(h => /^(name|restaurant|restaurant[\s_-]?name|company|brand)$/i.test(h));
-  const urlIdx  = headers.findIndex(h => /^(url|website|website[\s_-]?url|link|homepage|domain|web)$/i.test(h));
-
-  if (urlIdx === -1) return null; // signal: no URL column found
-
+  const headers = _csvLine(lines[0]);
   return lines.slice(1).map(line => {
-    const vals = parseLine(line);
-    const url  = (vals[urlIdx] || '').replace(/['"]/g, '').trim();
-    const name = nameIdx >= 0 ? (vals[nameIdx] || '').replace(/['"]/g, '').trim() : url;
-    return url ? { name: name || url, url } : null;
-  }).filter(Boolean);
+    const vals = _csvLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+    return obj;
+  }).filter(row => Object.values(row).some(v => v));
+}
+
+// Read file → array of plain objects.  Supports .csv, .xlsx, .xls
+function parseFile(file) {
+  return new Promise((resolve, reject) => {
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    const reader  = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload  = e => {
+      try {
+        if (isExcel) {
+          const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const ws   = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          resolve(rows);
+        } else {
+          resolve(parseCSVToObjects(e.target.result));
+        }
+      } catch (err) { reject(err); }
+    };
+    isExcel ? reader.readAsArrayBuffer(file) : reader.readAsText(file);
+  });
+}
+
+// Given a row object, find which key is the URL and which is the name
+function detectColumns(row) {
+  const keys = Object.keys(row);
+  const urlKey  = keys.find(k => /^(url|website|website[\s_]?url|link|homepage|domain|web)$/i.test(k.trim()));
+  const nameKey = keys.find(k => /^(name|restaurant|restaurant[\s_]?name|company|brand)$/i.test(k.trim()));
+  return { urlKey, nameKey };
 }
 
 function clearWIFile() {
@@ -509,49 +532,69 @@ function clearWIFile() {
   document.getElementById('wiFileInput').value = '';
   document.getElementById('wiPreview').style.display = 'none';
   document.getElementById('wiUploadArea').style.display = '';
-  document.getElementById('wiUploadText').textContent = 'Drop CSV here or click to upload';
+  document.getElementById('wiUploadText').textContent = 'Drop Excel or CSV here, or click to upload';
   document.getElementById('btnWIScrape').disabled = true;
 }
 
-function handleWIFile(file) {
-  if (!file || !file.name.endsWith('.csv')) {
-    return alert('Please upload a .csv file.');
-  }
-  const reader = new FileReader();
-  reader.onload = e => {
-    const parsed = parseCSV(e.target.result);
-    if (parsed === null) {
-      return alert('No URL column found. Make sure your CSV has a column named "url" or "website".');
+async function handleWIFile(file) {
+  if (!file) return;
+  const ok = /\.(csv|xlsx|xls)$/i.test(file.name);
+  if (!ok) return alert('Please upload a .csv, .xlsx, or .xls file.');
+
+  // Show loading state
+  document.getElementById('wiUploadText').textContent = 'Reading file…';
+
+  try {
+    const rows = await parseFile(file);
+    if (!rows.length) return alert('No data rows found in the file.');
+
+    const { urlKey, nameKey } = detectColumns(rows[0]);
+    if (!urlKey) {
+      document.getElementById('wiUploadText').textContent = 'Drop Excel or CSV here, or click to upload';
+      return alert(
+        'No URL column found.\n\n' +
+        'Make sure your file has a column named "url", "website", or "link".\n' +
+        `Columns found: ${Object.keys(rows[0]).join(', ')}`
+      );
     }
-    if (!parsed.length) {
-      return alert('No restaurant rows found in the CSV.');
-    }
-    wiRestaurants = parsed;
+
+    // Build restaurant list — keep full original row as _orig
+    wiRestaurants = rows.map(row => {
+      let url  = String(row[urlKey] || '').trim();
+      const name = nameKey ? String(row[nameKey] || '').trim() : url;
+      if (!url) return null;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      return { name: name || url, url, _orig: row };
+    }).filter(Boolean);
+
+    if (!wiRestaurants.length) return alert('No rows with a URL found.');
 
     // Show preview
     document.getElementById('wiUploadArea').style.display = 'none';
     document.getElementById('wiPreview').style.display = '';
     document.getElementById('wiPreviewCount').textContent =
-      `${parsed.length} restaurant${parsed.length !== 1 ? 's' : ''} loaded`;
+      `${wiRestaurants.length} restaurant${wiRestaurants.length !== 1 ? 's' : ''} loaded · ${Object.keys(rows[0]).length} original columns preserved`;
 
-    const rows = document.getElementById('wiPreviewRows');
-    rows.innerHTML = '';
-    parsed.slice(0, 5).forEach(r => {
+    const container = document.getElementById('wiPreviewRows');
+    container.innerHTML = '';
+    wiRestaurants.slice(0, 5).forEach(r => {
       const div = document.createElement('div');
       div.className = 'wi-preview-row';
       div.innerHTML = `<span class="wi-row-name">${r.name}</span><span class="wi-row-url">${r.url}</span>`;
-      rows.appendChild(div);
+      container.appendChild(div);
     });
-    if (parsed.length > 5) {
+    if (wiRestaurants.length > 5) {
       const more = document.createElement('div');
       more.className = 'wi-preview-more';
-      more.textContent = `+${parsed.length - 5} more…`;
-      rows.appendChild(more);
+      more.textContent = `+${wiRestaurants.length - 5} more…`;
+      container.appendChild(more);
     }
 
     document.getElementById('btnWIScrape').disabled = false;
-  };
-  reader.readAsText(file);
+  } catch (err) {
+    document.getElementById('wiUploadText').textContent = 'Drop Excel or CSV here, or click to upload';
+    alert('Error reading file: ' + err.message);
+  }
 }
 
 // File input click + drag-drop
@@ -571,7 +614,7 @@ wiUploadArea.addEventListener('drop', e => {
 
 // ── Start — Website Intel ─────────────────────────────────────────────────────
 document.getElementById('btnWIScrape').addEventListener('click', async () => {
-  if (!wiRestaurants.length) return alert('Please upload a CSV file first.');
+  if (!wiRestaurants.length) return alert('Please upload a file first.');
   const email = document.getElementById('wiEmail').value.trim();
 
   jobStartTime = null;

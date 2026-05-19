@@ -352,9 +352,8 @@ def send_google_maps_completion_email(
     _send(to_email, subject, html, attachment=excel_bytes, filename=filename)
 
 
-WEBSITE_INTEL_COLUMNS = [
-    ('Restaurant Name',       'name'),
-    ('Website URL',           'url'),
+# New intel columns appended after original file columns
+INTEL_NEW_COLUMNS = [
     ('Instagram URL',         'instagram_url'),
     ('Instagram Followers',   'instagram_followers'),
     ('Facebook URL',          'facebook_url'),
@@ -371,39 +370,87 @@ WEBSITE_INTEL_COLUMNS = [
     ('Notes',                 'notes'),
 ]
 
+# Fallback columns when no original file data is present
+WEBSITE_INTEL_COLUMNS = [
+    ('Restaurant Name',       'name'),
+    ('Website URL',           'url'),
+] + INTEL_NEW_COLUMNS
+
 
 def build_website_intel_excel(results: list) -> bytes:
-    """Build a single-sheet Excel file for Website Intelligence results."""
-    color = '7c3aed'   # purple brand color for this tool
+    """Build Excel: original file columns (gray header) + new intel columns (purple header)."""
+    PURPLE = '7c3aed'
+    GRAY   = '374151'
 
     wb = openpyxl.Workbook(write_only=True)
     ws = wb.create_sheet(title='Website Intelligence')
 
-    columns = WEBSITE_INTEL_COLUMNS
-
-    # Pre-compute column widths
-    col_widths = [len(header) for header, _ in columns]
-    for r in results[:200]:
-        for ci, (_, key) in enumerate(columns):
-            val_len = len(str(r.get(key, '') or ''))
-            if val_len > col_widths[ci]:
-                col_widths[ci] = val_len
-    for ci, width in enumerate(col_widths, start=1):
-        ws.column_dimensions[get_column_letter(ci)].width = min(width + 4, 60)
-
     hfont  = Font(bold=True, color='FFFFFF')
-    hfill  = PatternFill('solid', fgColor=color)
     halign = Alignment(horizontal='center', vertical='center', wrap_text=False)
 
-    header_cells = []
-    for header, _ in columns:
-        cell = WriteOnlyCell(ws, value=header)
-        cell.font, cell.fill, cell.alignment = hfont, hfill, halign
-        header_cells.append(cell)
-    ws.append(header_cells)
+    # Detect whether results carry original file data
+    first_with_orig = next((r for r in results if r.get('_orig')), None)
 
-    for r in results:
-        ws.append([r.get(key, '') for _, key in columns])
+    if first_with_orig:
+        orig_keys   = list(first_with_orig['_orig'].keys())
+        intel_cols  = INTEL_NEW_COLUMNS
+        all_headers = orig_keys + [h for h, _ in intel_cols]
+
+        # Pre-compute column widths
+        col_widths = [len(h) for h in all_headers]
+        for r in results[:200]:
+            orig = r.get('_orig', {})
+            for ci, k in enumerate(orig_keys):
+                col_widths[ci] = max(col_widths[ci], len(str(orig.get(k, '') or '')))
+            for ci, (_, key) in enumerate(intel_cols, start=len(orig_keys)):
+                col_widths[ci] = max(col_widths[ci], len(str(r.get(key, '') or '')))
+        for ci, w in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(ci)].width = min(w + 4, 60)
+
+        # Header row: gray for original cols, purple for new intel cols
+        header_cells = []
+        for k in orig_keys:
+            c = WriteOnlyCell(ws, value=k)
+            c.font  = hfont
+            c.fill  = PatternFill('solid', fgColor=GRAY)
+            c.alignment = halign
+            header_cells.append(c)
+        for h, _ in intel_cols:
+            c = WriteOnlyCell(ws, value=h)
+            c.font  = hfont
+            c.fill  = PatternFill('solid', fgColor=PURPLE)
+            c.alignment = halign
+            header_cells.append(c)
+        ws.append(header_cells)
+
+        # Data rows
+        for r in results:
+            orig = r.get('_orig', {})
+            row  = [orig.get(k, '') for k in orig_keys]
+            row += [r.get(key, '') for _, key in intel_cols]
+            ws.append(row)
+
+    else:
+        # No original data — use standard flat column list
+        columns = WEBSITE_INTEL_COLUMNS
+        col_widths = [len(h) for h, _ in columns]
+        for r in results[:200]:
+            for ci, (_, key) in enumerate(columns):
+                col_widths[ci] = max(col_widths[ci], len(str(r.get(key, '') or '')))
+        for ci, w in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(ci)].width = min(w + 4, 60)
+
+        header_cells = []
+        for header, _ in columns:
+            c = WriteOnlyCell(ws, value=header)
+            c.font  = hfont
+            c.fill  = PatternFill('solid', fgColor=PURPLE)
+            c.alignment = halign
+            header_cells.append(c)
+        ws.append(header_cells)
+
+        for r in results:
+            ws.append([r.get(key, '') for _, key in columns])
 
     buf = io.BytesIO()
     wb.save(buf)

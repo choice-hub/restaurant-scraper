@@ -410,7 +410,7 @@ def start_website_intel():
         if url:
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
-            cleaned.append({'name': name or url, 'url': url})
+            cleaned.append({'name': name or url, 'url': url, '_orig': r.get('_orig', {})})
 
     if not cleaned:
         return jsonify({'error': 'No valid restaurant URLs found'}), 400
