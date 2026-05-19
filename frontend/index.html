@@ -12,7 +12,7 @@
 
   <div class="container">
     <header>
-      <div class="header-badge">⚡ Wolt · Bolt · Foodora · Google Maps</div>
+      <div class="header-badge">⚡ Wolt · Bolt · Foodora · Google Maps · Website Intel</div>
       <h1>Restaurant Scraper</h1>
       <p class="subtitle">Extract restaurant data and receive an Excel file in your inbox</p>
     </header>
@@ -24,6 +24,9 @@
       </button>
       <button class="mode-tab" id="tabGoogleMaps" onclick="switchMode('googlemaps')">
         🗺️ Google Maps
+      </button>
+      <button class="mode-tab" id="tabWebsiteIntel" onclick="switchMode('websiteintel')">
+        🔍 Website Intel
       </button>
     </div>
 
@@ -77,6 +80,58 @@
 
       <button class="btn-scrape" id="btnScrape">
         <span class="btn-icon">🚀</span> Start Scraping
+      </button>
+    </main>
+
+    <!-- ── WEBSITE INTELLIGENCE FORM ───────────────────────────────── -->
+    <main class="card" id="formWebsiteIntel" style="display:none">
+      <div class="wi-header">
+        <h2 class="wi-title">🔍 Website Intelligence</h2>
+        <p class="wi-subtitle">Upload a CSV with restaurant names &amp; URLs — get social followers, emails, legal data, platform &amp; booking systems</p>
+      </div>
+
+      <!-- Step 1: Upload CSV -->
+      <section class="step">
+        <h2><span class="step-num">1</span> Upload Restaurant List</h2>
+        <p class="hint">CSV file with columns: <strong>name</strong> and <strong>url</strong> (or website / link)</p>
+        <div class="wi-upload-area" id="wiUploadArea">
+          <input type="file" id="wiFileInput" accept=".csv" style="display:none" />
+          <span class="wi-upload-icon">📂</span>
+          <span class="wi-upload-text" id="wiUploadText">Drop CSV here or click to upload</span>
+          <span class="wi-upload-sub">Columns needed: name, url</span>
+        </div>
+        <div class="wi-preview" id="wiPreview" style="display:none">
+          <div class="wi-preview-header">
+            <span id="wiPreviewCount"></span>
+            <button class="wi-clear-btn" onclick="clearWIFile()">✕ Clear</button>
+          </div>
+          <div class="wi-preview-rows" id="wiPreviewRows"></div>
+        </div>
+      </section>
+
+      <!-- Step 2: Email (optional) -->
+      <section class="step">
+        <h2><span class="step-num">2</span> Email <span class="optional-badge">Optional</span></h2>
+        <p class="hint">We'll email you the Excel when done.</p>
+        <div class="input-group">
+          <span class="input-icon">✉️</span>
+          <input type="email" id="wiEmail" placeholder="your@email.com" />
+        </div>
+      </section>
+
+      <!-- What gets extracted -->
+      <div class="wi-fields-info">
+        <div class="wi-field-tag">📸 Instagram followers</div>
+        <div class="wi-field-tag">👍 Facebook followers</div>
+        <div class="wi-field-tag">✉️ Email addresses</div>
+        <div class="wi-field-tag">🏢 Legal / ICO</div>
+        <div class="wi-field-tag">🛠️ Website platform</div>
+        <div class="wi-field-tag">🗓️ Reservation system</div>
+        <div class="wi-field-tag">🛒 Ordering system</div>
+      </div>
+
+      <button class="btn-scrape btn-wi" id="btnWIScrape" disabled>
+        <span class="btn-icon">🔍</span> Analyze Restaurants
       </button>
     </main>
 

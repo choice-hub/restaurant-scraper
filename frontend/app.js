@@ -15,10 +15,11 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   ? 'http://localhost:5000'
   : 'https://restaurant-scraper-api-ah9e.onrender.com';
 
-let currentJobId  = null;
-let pollInterval  = null;
-let jobStartTime  = null;
-let currentMode   = 'delivery';   // 'delivery' | 'googlemaps'
+let currentJobId    = null;
+let pollInterval    = null;
+let jobStartTime    = null;
+let currentMode     = 'delivery';   // 'delivery' | 'googlemaps' | 'websiteintel'
+let wiRestaurants   = [];           // parsed CSV rows for website intel
 
 const PLATFORM_ICONS  = { wolt: '🔵', bolt: '🟢', foodora: '🔴', glovo: '🟡' };
 const PLATFORM_LABELS = { wolt: 'Wolt', bolt: 'Bolt Food', foodora: 'Foodora', glovo: 'Glovo' };
@@ -26,10 +27,12 @@ const PLATFORM_LABELS = { wolt: 'Wolt', bolt: 'Bolt Food', foodora: 'Foodora', g
 // ── Mode switching ─────────────────────────────────────────────────────────────
 function switchMode(mode) {
   currentMode = mode;
-  document.getElementById('formDelivery').style.display   = mode === 'delivery'    ? '' : 'none';
-  document.getElementById('formGoogleMaps').style.display = mode === 'googlemaps'  ? '' : 'none';
-  document.getElementById('tabDelivery').classList.toggle('active',   mode === 'delivery');
-  document.getElementById('tabGoogleMaps').classList.toggle('active', mode === 'googlemaps');
+  document.getElementById('formDelivery').style.display      = mode === 'delivery'     ? '' : 'none';
+  document.getElementById('formGoogleMaps').style.display    = mode === 'googlemaps'   ? '' : 'none';
+  document.getElementById('formWebsiteIntel').style.display  = mode === 'websiteintel' ? '' : 'none';
+  document.getElementById('tabDelivery').classList.toggle('active',      mode === 'delivery');
+  document.getElementById('tabGoogleMaps').classList.toggle('active',    mode === 'googlemaps');
+  document.getElementById('tabWebsiteIntel').classList.toggle('active',  mode === 'websiteintel');
 }
 
 // ── Country dropdown (Google Maps) — restricted to supported markets ──────────
@@ -442,12 +445,13 @@ function setProgress(pct, statusText) {
 // ── Panel switching ───────────────────────────────────────────────────────────
 function showPanel(name) {
   const isGM = currentMode === 'googlemaps';
-  document.getElementById('formDelivery').style.display   = (name === 'form' && !isGM) ? '' : 'none';
-  document.getElementById('formGoogleMaps').style.display = (name === 'form' && isGM)  ? '' : 'none';
-  document.getElementById('progressPanel').style.display  = name === 'progress' ? '' : 'none';
-  document.getElementById('donePanel').style.display      = name === 'done'     ? '' : 'none';
-  document.getElementById('errorPanel').style.display     = name === 'error'    ? '' : 'none';
-  // Always show tabs unless in progress/done/error
+  const isWI = currentMode === 'websiteintel';
+  document.getElementById('formDelivery').style.display     = (name === 'form' && !isGM && !isWI) ? '' : 'none';
+  document.getElementById('formGoogleMaps').style.display   = (name === 'form' && isGM)           ? '' : 'none';
+  document.getElementById('formWebsiteIntel').style.display = (name === 'form' && isWI)           ? '' : 'none';
+  document.getElementById('progressPanel').style.display    = name === 'progress' ? '' : 'none';
+  document.getElementById('donePanel').style.display        = name === 'done'     ? '' : 'none';
+  document.getElementById('errorPanel').style.display       = name === 'error'    ? '' : 'none';
   document.querySelector('.mode-tabs').style.display = name === 'form' ? '' : 'none';
 }
 
@@ -463,3 +467,168 @@ document.getElementById('btnRetry').addEventListener('click', () => {
   clearInterval(pollInterval);
   showPanel('form');
 });
+
+// ── Website Intelligence ──────────────────────────────────────────────────────
+
+function parseCSV(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  // Parse a single CSV line respecting quoted fields
+  function parseLine(line) {
+    const fields = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === ',' && !inQuote) { fields.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    fields.push(cur.trim());
+    return fields;
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, '').trim());
+
+  // Find name + url column indices
+  const nameIdx = headers.findIndex(h => /^(name|restaurant|restaurant[\s_-]?name|company|brand)$/i.test(h));
+  const urlIdx  = headers.findIndex(h => /^(url|website|website[\s_-]?url|link|homepage|domain|web)$/i.test(h));
+
+  if (urlIdx === -1) return null; // signal: no URL column found
+
+  return lines.slice(1).map(line => {
+    const vals = parseLine(line);
+    const url  = (vals[urlIdx] || '').replace(/['"]/g, '').trim();
+    const name = nameIdx >= 0 ? (vals[nameIdx] || '').replace(/['"]/g, '').trim() : url;
+    return url ? { name: name || url, url } : null;
+  }).filter(Boolean);
+}
+
+function clearWIFile() {
+  wiRestaurants = [];
+  document.getElementById('wiFileInput').value = '';
+  document.getElementById('wiPreview').style.display = 'none';
+  document.getElementById('wiUploadArea').style.display = '';
+  document.getElementById('wiUploadText').textContent = 'Drop CSV here or click to upload';
+  document.getElementById('btnWIScrape').disabled = true;
+}
+
+function handleWIFile(file) {
+  if (!file || !file.name.endsWith('.csv')) {
+    return alert('Please upload a .csv file.');
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const parsed = parseCSV(e.target.result);
+    if (parsed === null) {
+      return alert('No URL column found. Make sure your CSV has a column named "url" or "website".');
+    }
+    if (!parsed.length) {
+      return alert('No restaurant rows found in the CSV.');
+    }
+    wiRestaurants = parsed;
+
+    // Show preview
+    document.getElementById('wiUploadArea').style.display = 'none';
+    document.getElementById('wiPreview').style.display = '';
+    document.getElementById('wiPreviewCount').textContent =
+      `${parsed.length} restaurant${parsed.length !== 1 ? 's' : ''} loaded`;
+
+    const rows = document.getElementById('wiPreviewRows');
+    rows.innerHTML = '';
+    parsed.slice(0, 5).forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'wi-preview-row';
+      div.innerHTML = `<span class="wi-row-name">${r.name}</span><span class="wi-row-url">${r.url}</span>`;
+      rows.appendChild(div);
+    });
+    if (parsed.length > 5) {
+      const more = document.createElement('div');
+      more.className = 'wi-preview-more';
+      more.textContent = `+${parsed.length - 5} more…`;
+      rows.appendChild(more);
+    }
+
+    document.getElementById('btnWIScrape').disabled = false;
+  };
+  reader.readAsText(file);
+}
+
+// File input click + drag-drop
+const wiUploadArea = document.getElementById('wiUploadArea');
+const wiFileInput  = document.getElementById('wiFileInput');
+
+wiUploadArea.addEventListener('click', () => wiFileInput.click());
+wiFileInput.addEventListener('change', e => handleWIFile(e.target.files[0]));
+
+wiUploadArea.addEventListener('dragover', e => { e.preventDefault(); wiUploadArea.classList.add('drag-over'); });
+wiUploadArea.addEventListener('dragleave', () => wiUploadArea.classList.remove('drag-over'));
+wiUploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  wiUploadArea.classList.remove('drag-over');
+  handleWIFile(e.dataTransfer.files[0]);
+});
+
+// ── Start — Website Intel ─────────────────────────────────────────────────────
+document.getElementById('btnWIScrape').addEventListener('click', async () => {
+  if (!wiRestaurants.length) return alert('Please upload a CSV file first.');
+  const email = document.getElementById('wiEmail').value.trim();
+
+  jobStartTime = null;
+  showPanel('progress');
+  document.getElementById('progressLocation').textContent = `${wiRestaurants.length} restaurants`;
+  document.getElementById('progressIcon').textContent = '🔍';
+  document.getElementById('platformRows').innerHTML = '';
+  document.getElementById('gmLiveCount').style.display = '';
+  document.getElementById('gmCountNum').textContent = '0';
+  document.getElementById('etaBadge').style.display = 'none';
+  setProgress(0, 'Starting analysis...');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/website-intel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurants: wiRestaurants, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to start job');
+    currentJobId = data.job_id;
+    startPolling(currentJobId, 'websiteintel');
+  } catch (err) {
+    showPanel('error');
+    document.getElementById('errorMsg').textContent = err.message;
+  }
+});
+
+// Patch updateProgress to handle websiteintel mode
+const _origUpdateProgress = updateProgress;
+function updateProgress(job, mode) {
+  if (mode === 'websiteintel') {
+    const scraped = job.scraped || 0;
+    document.getElementById('gmCountNum').textContent = scraped.toLocaleString();
+    const bar = document.getElementById('progressBar');
+    bar.style.animation = '';
+    bar.style.width = (job.progress || 0) + '%';
+
+    if (job.status === 'done') {
+      showPanel('done');
+      document.getElementById('doneMsg').textContent =
+        `Analyzed ${scraped.toLocaleString()} restaurants.`;
+      document.getElementById('gmStats').style.display = 'none';
+      if (job.has_file) {
+        const btn = document.getElementById('btnDownload');
+        btn.href = `${API_BASE}/api/jobs/${job.id}/download`;
+        btn.style.display = 'inline-flex';
+      }
+      return;
+    }
+    if (job.status === 'error') {
+      showPanel('error');
+      document.getElementById('errorMsg').textContent = job.message || 'Analysis failed.';
+      return;
+    }
+    setProgress(job.progress || 0, job.message || 'Analyzing...');
+    return;
+  }
+  _origUpdateProgress(job, mode);
+}

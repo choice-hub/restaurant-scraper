@@ -352,6 +352,64 @@ def send_google_maps_completion_email(
     _send(to_email, subject, html, attachment=excel_bytes, filename=filename)
 
 
+WEBSITE_INTEL_COLUMNS = [
+    ('Restaurant Name',       'name'),
+    ('Website URL',           'url'),
+    ('Instagram URL',         'instagram_url'),
+    ('Instagram Followers',   'instagram_followers'),
+    ('Facebook URL',          'facebook_url'),
+    ('Facebook Followers',    'facebook_followers'),
+    ('Email Address(es)',     'emails'),
+    ('Legal Name',            'legal_name'),
+    ('Company ID',            'company_id'),
+    ('IČO',                   'ico'),
+    ('Website Platform',      'website_platform'),
+    ('Reservation (Y/N)',     'reservation_possible'),
+    ('Reservation Provider',  'reservation_provider'),
+    ('Online Ordering (Y/N)', 'ordering_possible'),
+    ('Ordering Provider',     'ordering_provider'),
+    ('Notes',                 'notes'),
+]
+
+
+def build_website_intel_excel(results: list) -> bytes:
+    """Build a single-sheet Excel file for Website Intelligence results."""
+    color = '7c3aed'   # purple brand color for this tool
+
+    wb = openpyxl.Workbook(write_only=True)
+    ws = wb.create_sheet(title='Website Intelligence')
+
+    columns = WEBSITE_INTEL_COLUMNS
+
+    # Pre-compute column widths
+    col_widths = [len(header) for header, _ in columns]
+    for r in results[:200]:
+        for ci, (_, key) in enumerate(columns):
+            val_len = len(str(r.get(key, '') or ''))
+            if val_len > col_widths[ci]:
+                col_widths[ci] = val_len
+    for ci, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(ci)].width = min(width + 4, 60)
+
+    hfont  = Font(bold=True, color='FFFFFF')
+    hfill  = PatternFill('solid', fgColor=color)
+    halign = Alignment(horizontal='center', vertical='center', wrap_text=False)
+
+    header_cells = []
+    for header, _ in columns:
+        cell = WriteOnlyCell(ws, value=header)
+        cell.font, cell.fill, cell.alignment = hfont, hfill, halign
+        header_cells.append(cell)
+    ws.append(header_cells)
+
+    for r in results:
+        ws.append([r.get(key, '') for _, key in columns])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def send_error_email(to_email: str, platform: str, location: str, error_message: str):
     subject = f'❌ Scraping failed — {platform.capitalize()} / {location}'
     html = f"""
