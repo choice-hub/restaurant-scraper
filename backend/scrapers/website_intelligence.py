@@ -190,6 +190,69 @@ def _find_ordering(homepage_soup: BeautifulSoup) -> tuple[bool, str]:
     return False, ""
 
 
+def _extract_company_name(text: str) -> str:
+    """
+    Find the legal entity name (e.g. 'Fermé s.r.o.') from surrounding page text.
+    Walks backwards from the legal suffix and stops at context / label words.
+    """
+    SUFFIX_PAT = (
+        r"(?:s\.r\.o\.|a\.s\.|spol\.\s*s\s*r\.o\.|s\.p\.|v\.o\.s\.|"
+        r"GmbH(?:\s*&\s*Co\.\s*KG)?|Ltd\.?|LLC|Inc\.?|S\.A\.|S\.L\.|"
+        r"B\.V\.|N\.V\.|d\.o\.o\.|k\.s\.|z\.s\.|o\.p\.s\.)"
+    )
+
+    # Words that definitely precede but are NOT part of the company name
+    STOP_WORDS = {
+        # Czech / Slovak labels
+        "Provozovatel", "Provozovatelka", "Firemní", "Odpovědný", "Odpovědná",
+        "Vedoucí", "vedoucí", "Majitel", "Majitelka", "Sídlo", "Adresa",
+        "Kontakt", "Telefon", "Provozovna", "Informace", "Fakturační",
+        "Zákazníkům", "Udaje", "Údaje", "Zapsáno", "Zapsána",
+        # German
+        "Betreiber", "Inhaber", "Geschäftsführer", "Sitz",
+        # English context words
+        "Read", "More", "About", "Us", "Public", "Holidays", "Sundays",
+        "Saturday", "Whatsapp", "Message", "Phone", "Email", "Contact",
+        "Address", "Operator", "Owner", "Manager", "Provider", "Via",
+    }
+
+    for m in re.finditer(SUFFIX_PAT, text, re.IGNORECASE):
+        suffix = m.group(0)
+        # Grab up to 120 chars before the suffix
+        start = max(0, m.start() - 120)
+        before = text[start:m.start()]
+
+        # Split on hard boundaries (newlines, tabs, sentence-ending punctuation)
+        segments = re.split(r"[\n\r\t]|(?<=[.!?])\s+", before)
+        last_segment = segments[-1] if segments else before
+
+        # Extract word tokens (allow accented chars used in Czech/Slovak/etc. names)
+        tokens = re.findall(
+            r"[A-Za-záčďéěíňóřšťůúýžÁČĎÉĚÍŇÓŘŠŤŮÚÝŽäöüÄÖÜßàâéèêëîïôùûœæ&'\-]{2,}",
+            last_segment,
+        )
+        if not tokens:
+            continue
+
+        # Walk BACKWARDS from the suffix, collecting tokens that form the name.
+        # Stop at: stop-words OR a token that starts with a lowercase letter
+        # (lowercase = clearly a sentence / context word, not a proper name).
+        name_tokens = []
+        for token in reversed(tokens[-6:]):
+            if token in STOP_WORDS:
+                break
+            if token[0].islower():          # context word
+                break
+            name_tokens.insert(0, token)
+            if len(name_tokens) >= 4:       # company names rarely exceed 4 words
+                break
+
+        if name_tokens:
+            return " ".join(name_tokens) + " " + suffix.strip()
+
+    return ""
+
+
 def _extract_legal_regex(text: str) -> dict:
     """Fast regex pass for common legal registration patterns."""
     result = {"legal_name": "", "company_id": "", "ico": ""}
@@ -208,19 +271,13 @@ def _extract_legal_regex(text: str) -> dict:
     if not result["company_id"]:
         m = re.search(
             r"(?:Company|Registration|Reg)\.?\s*No\.?:?\s*([\w\d\s/-]{3,20})",
-            text, re.IGNORECASE
+            text, re.IGNORECASE,
         )
         if m:
             result["company_id"] = m.group(1).strip()
 
-    # Legal entity name (s.r.o., a.s., GmbH, Ltd., etc.)
-    m = re.search(
-        r"([^\n,;|·–—]{2,60}?\b(?:s\.r\.o\.|a\.s\.|spol\.\s*s\s*r\.o\.|s\.p\.|"
-        r"GmbH|Ltd\.|LLC|Inc\.|S\.A\.|S\.L\.|B\.V\.|N\.V\.))",
-        text,
-    )
-    if m:
-        result["legal_name"] = m.group(1).strip()
+    # Legal entity name — extracted cleanly without surrounding context
+    result["legal_name"] = _extract_company_name(text)
 
     return result
 
