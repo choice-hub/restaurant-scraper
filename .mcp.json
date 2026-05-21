@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "restaurant-scraper": {
+      "command": "/opt/homebrew/bin/python3.13",
+      "args": ["${workspaceFolder}/mcp_server.py"]
+    }
+  }
+}

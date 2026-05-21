@@ -1,5 +1,15 @@
 services:
   - type: web
+    name: restaurant-scraper-mcp
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r mcp_requirements.txt
+    startCommand: python mcp_server.py --http
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  - type: web
     name: restaurant-scraper-api
     runtime: python
     rootDir: backend
