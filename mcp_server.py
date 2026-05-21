@@ -16,6 +16,7 @@ import textwrap
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 API_BASE      = "https://restaurant-scraper-api-ah9e.onrender.com"
@@ -23,6 +24,8 @@ POLL_INTERVAL = 5      # seconds between status checks
 MAX_POLL_SECS = 300    # 5 minutes — then return "still running" with job ID
 
 # ── Server ─────────────────────────────────────────────────────────────────────
+# Disable DNS-rebinding protection so the server works behind Render's reverse
+# proxy (which sends the public hostname, not localhost, as the Host header).
 mcp = FastMCP(
     "Restaurant Scraper",
     instructions=textwrap.dedent("""
@@ -31,6 +34,7 @@ mcp = FastMCP(
         conversation. Start with `describe_platforms` to understand what data
         each source provides.
     """).strip(),
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
 )
 
 
@@ -380,9 +384,13 @@ if __name__ == "__main__":
     if "--http" in sys.argv:
         # Remote HTTP mode — for deploying on Render so colleagues can connect
         import uvicorn
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
         port = int(os.environ.get("PORT", 8080))
         print(f"Starting HTTP MCP server on port {port}…", flush=True)
-        uvicorn.run(mcp.streamable_http_app(), host="0.0.0.0", port=port)
+        # Wrap with TrustedHostMiddleware(allowed_hosts=["*"]) so Render's
+        # reverse-proxy Host header doesn't trigger a 421 rejection.
+        app = TrustedHostMiddleware(mcp.streamable_http_app(), allowed_hosts=["*"])
+        uvicorn.run(app, host="0.0.0.0", port=port, proxy_headers=True, forwarded_allow_ips="*")
     else:
         # Local stdio mode — standard for Claude Code
         mcp.run(transport="stdio")
