@@ -379,9 +379,10 @@ def check_job(job_id: str) -> str:
 if __name__ == "__main__":
     if "--http" in sys.argv:
         # Remote HTTP mode — for deploying on Render so colleagues can connect
+        import uvicorn
         port = int(os.environ.get("PORT", 8080))
         print(f"Starting HTTP MCP server on port {port}…", flush=True)
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
+        uvicorn.run(mcp.streamable_http_app(), host="0.0.0.0", port=port)
     else:
         # Local stdio mode — standard for Claude Code
         mcp.run(transport="stdio")
