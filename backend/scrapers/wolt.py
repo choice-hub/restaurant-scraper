@@ -5,6 +5,7 @@ Phase 2: concurrent per-venue page scrapes for phone, merchant/legal data.
 """
 import gc
 import re
+import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -176,8 +177,17 @@ def scrape_wolt(location: str, cuisine: str, job: dict, fetch_details: bool = Tr
 
     job['message'] = f'Fetching restaurant list near {formatted}...'
     url = f'{BASE}/v1/pages/restaurants'
-    r = requests.get(url, params={'lat': lat, 'lon': lon}, headers=HEADERS, timeout=30)
-    r.raise_for_status()
+    for attempt in range(5):
+        r = requests.get(url, params={'lat': lat, 'lon': lon}, headers=HEADERS, timeout=30)
+        if r.status_code == 429:
+            wait = int(r.headers.get('Retry-After', 4 ** attempt))
+            job['message'] = f'Rate limited by Wolt — retrying in {wait}s (attempt {attempt+1}/5)...'
+            time.sleep(wait)
+            continue
+        r.raise_for_status()
+        break
+    else:
+        raise Exception('Wolt API rate limit: too many requests. Try again in a few minutes.')
     data = r.json()
 
     results = []
