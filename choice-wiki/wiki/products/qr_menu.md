@@ -70,7 +70,7 @@ On Prague's Old Town Square, most restaurants have QR orders deployed. They serv
 | Table turnover speed | +30% |
 | Personnel cost reduction | ~30% |
 | Average check increase | ~25% |
-| Tip revenue increase | +20% (+10% or more with QR) |
+| Tip revenue increase | +20–30% (typically +30% in first month with QR orders) |
 | Guest time saved | 20–30% |
 
 ## Sales Arguments

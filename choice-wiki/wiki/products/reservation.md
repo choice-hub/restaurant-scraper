@@ -56,6 +56,12 @@ Online reservation system with a clear calendar, automatic booking confirmation,
 ## Real Example
 A restaurant takes reservations only by phone — during lunch nobody answers and a few guests go elsewhere each day. They install Choice reservations: guests book online even from their couch in the evening, the system sends reminders, evening tables have a deposit set. Result: more reservations, fewer no-shows, and staff focus on guests instead of the phone. Real cases show reservation increases of hundreds of percent.
 
+## Business Impact
+| Metric | Improvement |
+|--------|------------|
+| Visits increase | +20% (more visibility via Google, social, website, QR) |
+| Staff time saved | up to 30% (less time on calls and manual booking) |
+
 ## Sales Arguments
 **Strong:**
 - More reservations without picking up the phone

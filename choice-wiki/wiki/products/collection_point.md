@@ -53,6 +53,11 @@ Consolidation of all delivery marketplace platforms into one app and one tablet.
 ## Real Example
 Restaurant has three tablets (Wolt, Bolt, Foodora) on the counter, manually enters orders into the POS, and chaos erupts during peak hours. They install Collection Point: one tablet, one menu, orders go directly into the POS. Staff focus on cooking instead of re-entering, and the owner sees which platform earns the most.
 
+## Business Impact
+| Metric | Improvement |
+|--------|------------|
+| Operational efficiency | +28% |
+
 ## Sales Arguments
 **Strong:**
 - One tablet instead of several — end of counter chaos
