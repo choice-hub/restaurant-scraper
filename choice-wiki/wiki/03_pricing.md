@@ -147,10 +147,32 @@ Choice uses the **Interchange++** model for card payments:
 
 ## Regional Pricing
 
-Choice operates across 13+ countries. Pricing is displayed in **EUR** across all regions. For local currency pricing in CZ, SK, PL, UA, HU, EE, LT, LV, RO — check the live pricing page at:
-- https://choiceqr.com/pricing (select your country in the top navigation)
+All regions have identical plan features. Only the price and currency differ. Basic is always **free**. Ukraine has a different billing discount structure (6 months −10%, 12 months −20%).
 
-The pricing structure (4 plans, same feature tiers) is consistent across all regions. Local payment processors and currencies may be supported.
+| Country | Standard | Smart | Pro | Currency | Billing discounts |
+|---------|----------|-------|-----|----------|-------------------|
+| 🇨🇿 Czech Republic | 990 Kč | 2 090 Kč | 2 990 Kč | CZK/month | 12mo −10%, 24mo −20% |
+| 🇸🇰 Slovakia | €40 | €85 | €125 | EUR/month | 12mo −10%, 24mo −20% |
+| 🇵🇱 Poland | 160 zł | 319 zł | 399 zł | PLN/month | 12mo −10%, 24mo −20% |
+| 🇺🇦 Ukraine | 1 240 ₴ | 2 000 ₴ | 3 080 ₴ | UAH/month | **6mo −10%, 12mo −20%** |
+| 🇭🇺 Hungary | 12 900 Ft | 23 900 Ft | 31 900 Ft | HUF/month | 12mo −10%, 24mo −20% |
+| 🇪🇪 Estonia | €32 | €68 | €100 | EUR/month | 12mo −10%, 24mo −20% |
+| 🇱🇹 Lithuania | €32 | €68 | €100 | EUR/month | 12mo −10%, 24mo −20% |
+| 🇱🇻 Latvia | €32 | €68 | €100 | EUR/month | 12mo −10%, 24mo −20% |
+| 🇷🇴 Romania | 160 lei | 340 lei | 500 lei | RON/month | 12mo −10%, 24mo −20% |
+| 🌍 Global (EN) | €32 | €68 | €100 | EUR/month | 12mo −10%, 24mo −20% |
+
+Regional pricing pages:
+- CZ: https://choiceqr.com/cs/cenik-choice/
+- SK: https://choiceqr.com/sk/cennik-choice/
+- PL: https://choiceqr.com/pl/cennik/
+- UA: https://choiceqr.com/uk/pricing/
+- HU: https://choiceqr.com/hu/arazas/
+- EE: https://choiceqr.com/et/hinnakiri-choice-qr/
+- LT: https://choiceqr.com/lt/kainorastis-choice-qr/
+- LV: https://choiceqr.com/lv/cenradis-choice-qr/
+- RO: https://choiceqr.com/ro/preturi/
+- Global: https://choiceqr.com/pricing/
 
 ---
 
