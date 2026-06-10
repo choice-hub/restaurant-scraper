@@ -45,7 +45,7 @@ Choice uses a **fixed monthly subscription** with no commission on direct orders
 
 ---
 
-### Standard — €32/month *(see regional prices below)*
+### Standard — from €32/month *(see regional prices below)*
 > For busy places ready to grow sales.
 
 **Online payment fee:** 3% on delivery & pickup orders (online payments only)
@@ -57,7 +57,7 @@ Choice uses a **fixed monthly subscription** with no commission on direct orders
 
 ---
 
-### Smart — €68/month *(see regional prices below)* ⭐ POPULAR
+### Smart — from €68/month *(see regional prices below)* ⭐ POPULAR
 > For restaurants focused on customer retention.
 
 **Online payment fee:** 0% *(both online payments and cash accepted)*
@@ -76,7 +76,7 @@ Choice uses a **fixed monthly subscription** with no commission on direct orders
 
 ---
 
-### Pro — €100/month *(see regional prices below)*
+### Pro — from €100/month *(see regional prices below)*
 > For multi-location restaurants and advanced operations.
 
 **Online payment fee:** 0% *(both online payments and cash accepted)*
@@ -116,18 +116,50 @@ These features can be added to any plan that doesn't include them:
 
 All regions have **identical features per plan**. Only prices and currency differ. Basic is always free everywhere.
 
-| Country | Standard | Smart | Pro | Currency |
-|---------|----------|-------|-----|----------|
-| 🇨🇿 Czech Republic | 990 Kč | 2 090 Kč | 2 990 Kč | CZK/month |
-| 🇸🇰 Slovakia | €40 | €85 | €125 | EUR/month |
-| 🇵🇱 Poland | 160 zł | 319 zł | 399 zł | PLN/month |
-| 🇺🇦 Ukraine | 1 240 ₴ | 2 000 ₴ | 3 080 ₴ | UAH/month *(6mo −10%, 12mo −20%)* |
-| 🇭🇺 Hungary | 12 900 Ft | 23 900 Ft | 31 900 Ft | HUF/month |
-| 🇪🇪 Estonia | €32 | €68 | €100 | EUR/month |
-| 🇱🇹 Lithuania | €32 | €68 | €100 | EUR/month |
-| 🇱🇻 Latvia | €32 | €68 | €100 | EUR/month |
-| 🇷🇴 Romania | 160 lei | 340 lei | 500 lei | RON/month |
-| 🌍 Global (EN) | €32 | €68 | €100 | EUR/month |
+### Monthly pricing
+
+| Country | Standard | Smart | Pro |
+|---------|----------|-------|-----|
+| 🇨🇿 Czech Republic | 990 Kč | 2 090 Kč | 2 990 Kč |
+| 🇸🇰 Slovakia | €40 | €85 | €125 |
+| 🇵🇱 Poland | 199 zł | 399 zł | 499 zł |
+| 🇺🇦 Ukraine | 1 550 ₴ | 2 500 ₴ | 3 850 ₴ |
+| 🇭🇺 Hungary | 15 900 Ft | 29 900 Ft | 39 900 Ft |
+| 🇪🇪 Estonia | €40 | €85 | €125 |
+| 🇱🇹 Lithuania | €40 | €85 | €125 |
+| 🇱🇻 Latvia | €40 | €85 | €125 |
+| 🇷🇴 Romania | 200 lei | 425 lei | 625 lei |
+| 🌍 Global (EN) | €40 | €85 | €125 |
+
+### 12-month billing — save 10% (except Ukraine: 6-month −10%)
+
+| Country | Standard | Smart | Pro |
+|---------|----------|-------|-----|
+| 🇨🇿 Czech Republic | 891 Kč | 1 881 Kč | 2 691 Kč |
+| 🇸🇰 Slovakia | €36 | €77 | €113 |
+| 🇵🇱 Poland | 179 zł | 359 zł | 449 zł |
+| 🇺🇦 Ukraine *(6 months −10%)* | 1 395 ₴ | 2 250 ₴ | 3 465 ₴ |
+| 🇭🇺 Hungary | 13 900 Ft | 26 900 Ft | 35 900 Ft |
+| 🇪🇪 Estonia | €36 | €77 | €113 |
+| 🇱🇹 Lithuania | €36 | €77 | €113 |
+| 🇱🇻 Latvia | €36 | €77 | €113 |
+| 🇷🇴 Romania | 180 lei | 385 lei | 565 lei |
+| 🌍 Global (EN) | €36 | €77 | €113 |
+
+### 24-month billing — save 20% (Ukraine: 12-month −20%)
+
+| Country | Standard | Smart | Pro |
+|---------|----------|-------|-----|
+| 🇨🇿 Czech Republic | 792 Kč | 1 672 Kč | 2 392 Kč |
+| 🇸🇰 Slovakia | €32 | €68 | €100 |
+| 🇵🇱 Poland | 160 zł | 319 zł | 399 zł |
+| 🇺🇦 Ukraine *(12 months −20%)* | 1 240 ₴ | 2 000 ₴ | 3 080 ₴ |
+| 🇭🇺 Hungary | 12 900 Ft | 23 900 Ft | 31 900 Ft |
+| 🇪🇪 Estonia | €32 | €68 | €100 |
+| 🇱🇹 Lithuania | €32 | €68 | €100 |
+| 🇱🇻 Latvia | €32 | €68 | €100 |
+| 🇷🇴 Romania | 160 lei | 340 lei | 500 lei |
+| 🌍 Global (EN) | €32 | €68 | €100 |
 
 ### Regional pricing pages
 - 🇨🇿 CZ: https://choiceqr.com/cs/cenik-choice/
