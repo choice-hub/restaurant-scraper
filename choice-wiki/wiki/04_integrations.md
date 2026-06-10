@@ -26,11 +26,29 @@ Choice integrates with all major food delivery platforms via **Collection Point*
 
 | Service | Type | Notes |
 |---------|------|-------|
-| **Wolt Drive** | Courier dispatch | Order a courier for your own website orders |
+| **Wolt Drive** | Courier dispatch | Primary — fixed price per delivery, no % commission |
+| **Foodora Go** | Courier dispatch | Coming soon — similar model to Wolt Drive |
 | **Stuart** | Courier dispatch | On-demand courier for direct orders |
 | **Glovo on-demand** | Courier dispatch | Glovo courier for non-Glovo orders |
 | **Uber Direct** | Courier dispatch | Uber courier for direct orders |
-| **Foodora Go** | Courier dispatch | Foodora courier for direct orders |
+| **Byteberry** | Advanced dispatch | Advanced courier management and dispatching system for larger operations |
+
+Available on all plans (Basic and up).
+
+### Wolt Drive Pricing (standard rates)
+| Zone | Price |
+|------|-------|
+| Up to 1 km | 90 CZK |
+| Up to 3 km | 125 CZK |
+| Up to 6 km | 138 CZK |
+
+Restaurants can set their own **delivery fee charged to the customer** (e.g. 40 CZK), meaning real net cost can be as low as ~50 CZK.
+
+**Coverage maps:**
+- [Czech Republic Wolt Drive zones](https://www.google.com/maps/d/u/0/viewer?ll=50.60172346190127%2C13.752219787823424&z=13&mid=1QlTK5WmS-QdVUe0qjkawTnWypt3t-nE)
+- [Slovakia Wolt Drive zones](https://www.google.com/maps/d/u/0/viewer?mid=13T2nFB_SmMupPjMv34_YqSIXRjuUMCM&ll=48.70032260312576%2C19.2761215859375&z=9)
+
+**Own couriers:** also supported — orders dispatched via a Telegram group to couriers.
 
 Available on all plans (Basic and up).
 
@@ -38,18 +56,24 @@ Available on all plans (Basic and up).
 
 ## POS System Integrations
 
-| POS System | Notes |
-|------------|-------|
-| **Poster** | Full integration — orders auto-sent to kitchen |
-| **Syrve (iiko)** | Full integration |
-| **Serviop** | Full integration |
-| **Profit** | Full integration |
-| **Compucash** | Full integration |
-| **R-Keeper** | Full integration |
-| **Dotykačka** | Full integration |
-| **Storyous** | Full integration (Pro plan) |
+| POS System | Priority | Notes |
+|------------|----------|-------|
+| **Dotykačka** | ⭐ Primary | Most reliable — recommended first |
+| **Storyous** | ⭐ Primary | Most reliable — recommended first |
+| **Poster** | Secondary | Full integration |
+| **Syrve (iiko)** | Secondary | Full integration |
+| **R-Keeper** | Secondary | Full integration |
+| **ArchiePro** | Secondary | Full integration |
+| **RestSys** | Secondary | Full integration |
+| **Ica** | Secondary | Full integration |
+| **POSnet** | Secondary | Full integration |
+| **Compucash** | Secondary | Full integration |
 
-POS integrations available on **Standard, Smart, and Pro plans**. Pro plan required for advanced POS features.
+> **Note:** Dotykačka and Storyous are the most stable integrations — always offer these first. Other POS integrations exist but are less stable; discuss with an experienced colleague before selling them.
+
+**Important QR distinction:**
+- **QR orders** can work **without POS integration** — orders come to the Choice Business tablet, staff manually mark them in the POS.
+- **QR payments require POS integration** — items must be marked in the POS first, then the bill is automatically transferred to the QR code for the guest to pay. Only Dotykačka and Storyous are recommended for QR payments.
 
 ### What POS Integration Does
 - Orders from Choice (website, QR table, marketplace) flow automatically to POS
