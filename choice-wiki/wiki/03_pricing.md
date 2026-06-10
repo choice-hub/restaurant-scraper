@@ -175,22 +175,62 @@ All regions have **identical features per plan**. Only prices and currency diffe
 
 ---
 
+## Setup Fees (one-time, paid at contract start)
+
+| Type | CZK | EUR | What's included |
+|------|-----|-----|----------------|
+| Core | 2 500 Kč | €100 | Profile creation, onboarding, launch |
+| POS integration | 2 000 Kč | €80 | Cash register connection |
+| Collection Point | 2 000 Kč | €80 | Marketplace integrations (Wolt, Bolt, Foodora, Bistro, Uber Eats) |
+
+> Trial option available (1–3 months full features) when there is a clear business case — not a standard offering. Setup Fee still applies if integrations are included.
+
+---
+
+## Hardware
+
+Recommended: iPad or Lenovo tablet. Clients source hardware themselves, or Choice can supply a **Lenovo tablet for 4,000 CZK / ~€160**.
+
+---
+
 ## Payment Processing Fees
 
-Choice uses the **Interchange++** model:
+Choice uses the **IC++ (Interchange++)** model — fully transparent, industry-standard.
 
+### Delivery & Takeaway orders
+- **1.3% + 2.50 CZK** (CZ)
+- **1.3% + €0.10** (EUR markets)
+
+### QR Payments / Table Orders
+- **0.99% + 2.50 CZK** (CZ)
+- **0.99% + €0.10** (EUR markets)
+
+> Special pricing possible for high-volume clients or competitive situations — requires approval.
+
+### Service Fee options (passed to end customer or absorbed)
+| Option | Rate |
+|--------|------|
+| Fixed fee | 2.50 CZK / €0.10 |
+| % passed to customer | 1–1.5% (min 2.50 CZK / €0.10, max 26 CZK / €1.00) |
+
+### IC++ breakdown (informational)
+| Card type | Typical range |
+|-----------|--------------|
+| Standard debit (EU) | 0.25–0.35% |
+| Credit (EU) | 0.35–0.45% |
+| Premium / corporate / foreign | 0.7–2% |
+
+### Other fees (Adyen)
 | Fee | Rate |
 |-----|------|
-| Interchange (EU debit) | from 0.2% |
-| Interchange (EU credit) | up to 0.3% |
-| Card scheme fees | ~0.16%–1.12% + €0.13–€1.00/transaction |
-| Choice processing fee | 1.3% + €0.10/transaction |
 | Payout of funds | €0.33/transfer |
-| Refund | €0.10 (free if within 24 hours) |
+| Refund | €0.10 (free within 24 hours) |
 | Chargeback | €18.18 |
 | Cross-border payout | €10.76 |
 | American Express | 3.30–3.45% |
 | 3DS authentication | €0.05/request |
+
+> Funds reach the restaurant's bank account within **48 hours** of the order.
 
 ---
 

@@ -1,48 +1,49 @@
 # Product: Reservation System
 
+**URL:** https://choiceqr.com/products-en/reservation-system/
+
 ## Overview
-Automated table reservation management. Customers book online via website widget, social media, QR code, or Google listing. Staff manage all bookings through a centralized calendar in the Choice app.
+Automate the reservation process, save staff up to 30% of their time, and never miss a booking. Customers book online via multiple channels; staff manage everything in a centralized calendar in the Choice app.
+
+## Booking Channels
+- Own restaurant website (embedded widget)
+- Direct shareable link (Instagram, Facebook, etc.)
+- QR code (printed at entrance or on tables)
+- Google Business Profile "Reserve a Table" button
 
 ## Key Features
 
-**Booking Channels**
-- Website embedded widget
-- Direct link (shareable on Instagram, Facebook, etc.)
-- QR code (printed at entrance or on tables)
-- Google Business Profile button ("Reserve a Table")
+**Automated Management**
+- All reservations sent automatically to the Choice Business app
+- Staff spends less time on phone calls and manual booking
+- Automatic system reduces likelihood of mistakes
+- Reservations organized by day — no booking is missed
 
-**Booking Process**
-- Guest selects date, time, party size, leaves contact details and notes
-- Staff receives instant notification in Choice Business app + email
-- Staff confirms or adjusts booking
-- Guest receives automatic confirmation email/SMS
+**Interactive Calendar**
+- Detailed calendar with table map / floor plan view
+- Day-by-day management with shift and time-slot control
+- Easy to modify, confirm, or cancel bookings
 
-**Management Tools**
-- Interactive calendar with day-by-day overview
-- Table mapping and floor plan view
-- Shift and time-slot management
-- Post-visit review request sent automatically
+**No Own Website Needed**
+- Reservations are part of the Choice platform; booking link works without a restaurant website
+- Even without a full website, restaurants can accept online reservations
 
 **Guest Communication**
-- Automatic confirmation after approval
-- SMS/email reminders (reduces no-shows)
+- Automatic confirmation email/SMS after approval
+- Reminder notifications reduce no-shows
+- Post-visit review request sent automatically
 
-## How It Works
-1. Customer finds reservation link (website, Google, QR, social)
-2. Fills in date, time, party size, contact
-3. Restaurant app notifies staff
-4. Staff confirms → guest gets confirmation
-5. After visit, automatic review request sent
+**Google Integration**
+- Reserve button appears directly on Google Maps listing
+- Google Calendar sync for staff
 
 ## Business Impact
 | Metric | Improvement |
 |--------|------------|
 | Staff time saved | Up to 30% |
 | Booking volume increase | Up to 20% |
-| Conversion rate improvement | 17–30% |
-| Commissions | 0% (vs. OpenTable, Resy) |
+| Commissions | 0% (vs OpenTable, Resy) |
 
-## Plans
-- **Standard plan** — Included
-- **Basic plan** — Available as add-on for **€40/month**
-- Google calendar integration and management tools: included with Standard+
+## Plan Availability
+- **Standard, Smart, Pro:** Included
+- **Basic:** Available as add-on for **€40/month**

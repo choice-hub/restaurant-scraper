@@ -1,52 +1,45 @@
 # Product: Collection Point
 
+**URL:** https://choiceqr.com/products-en/collection-point/
+
 ## Overview
-Collection Point consolidates all marketplace orders (Wolt, Glovo, Bolt, Uber Eats, Foodora, Just Eat) onto a **single tablet** in a single interface. No more juggling multiple tablets or missing orders.
+Manage all orders from **Wolt, Bolt, Glovo, Stuart, UberEats, and Foodora** marketplaces on a single device in one unified interface. No more juggling separate tablets per marketplace.
 
 ## Supported Marketplaces
-- Wolt
-- Bolt Food
-- Glovo
-- Uber Eats
-- Foodora
-- Just Eat Takeaway
-- Stuart
+- Wolt, Bolt Food, Glovo, Uber Eats, Foodora, Stuart, Just Eat Takeaway
 
 ## Key Features
 
 **Unified Order Management**
-- All marketplace orders in one screen with marketplace branding visible
-- No separate device per platform
-- Single notification center — no missed orders
+- Receive and manage all marketplace orders from one device
+- Orders labeled with each marketplace's logo and brand colors
+- See order number and all necessary information at a glance
+- Process direct orders (own delivery site) and marketplace orders in the same interface
+- No missed orders — single notification center
 
 **Menu Management**
-- Edit menus for each marketplace independently from Choice admin panel
-- Adjust prices, dish names, availability per platform
-- Enable/disable specific marketplaces instantly
+- Add and modify items in Choice — data automatically synced to all connected marketplaces
+- Edit prices, names, availability per platform independently
+- Manage all marketplace menus from one place
 
 **POS Integration**
-- Orders automatically transferred to cash register / kitchen system
-- Eliminates manual data entry
-- Reduces order errors
+- Orders from marketplaces automatically transferred to POS — no manual data entry
+- Integrates with Storyous, Dotykačka, Poster, Syrve, R-Keeper, and others
+- Eliminates errors from manual input
 
 **Analytics**
 - Track volume, average check, popular dishes per platform
-- Compare marketplace performance vs. direct orders
+- Compare marketplace vs. direct order performance
 - Revenue breakdown per channel
-
-## How It Works
-1. Customer orders on Wolt / Glovo / etc.
-2. Order appears in Choice Business app on single tablet
-3. Staff confirms → automatically sent to POS/kitchen
-4. Analytics updated in real time
 
 ## Business Impact
 | Metric | Improvement |
 |--------|------------|
-| Operational efficiency | +28% |
-| Missed orders | Near zero |
-| Setup time | Minimal (activate in settings) |
+| Devices needed | 1 (instead of one per marketplace) |
+| Manual entry errors | Eliminated |
+| Order processing speed | Significantly faster |
+| Setup | Instant — activate in settings |
 
-## Plans
-Available on **Smart and Pro plans**.
-Also available as an add-on to Basic/Standard for **€40/month**.
+## Plan Availability
+- **Basic & Standard:** Available as add-on (€40/month)
+- **Smart & Pro:** Included
