@@ -1,5 +1,15 @@
 services:
   - type: web
+    name: choice-wiki-mcp
+    runtime: python
+    rootDir: choice-wiki
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    envVars:
+      - key: RENDER
+        value: "true"
+
+  - type: web
     name: restaurant-scraper-mcp
     runtime: python
     rootDir: .

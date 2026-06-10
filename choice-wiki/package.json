@@ -1,0 +1,13 @@
+{
+  "name": "choice-wiki-mcp",
+  "version": "1.0.0",
+  "description": "MCP server providing knowledge base about Choice restaurant platform",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
