@@ -1,48 +1,54 @@
 # Product: Reviews Management
 
-## Overview
-Collect, manage, and respond to customer reviews from a centralized dashboard. Automatically routes happy guests to Google/TripAdvisor and catches unhappy guests before they post publicly.
+**Part of:** Marketing Tools / all plans
+**URL:** https://choiceqr.com/products-en/marketing-for-restaurants/
+
+## TL;DR
+Automatically collect feedback after every order or visit. Positive reviews are routed to Google/TripAdvisor; negative ones go privately to the manager. **Main pain:** unhappy guests post publicly before the restaurant can react. **Main argument:** more Google reviews, fewer public complaints.
+
+## What It Is
+Smart review funnel: after each order or visit, the guest is automatically prompted for feedback. The system filters by sentiment and routes accordingly.
 
 ## Key Features
 
 **Review Collection**
-- Instant feedback request after order or visit (via QR code, app, email)
+- Automatic feedback request after order or visit (QR, app, or email)
 - Anonymous or identified submissions
-- Triggered automatically — no manual follow-up needed
+- No manual follow-up needed
 
 **Smart Routing**
-- Positive reviews → prompted to share on Google / TripAdvisor / website
-- Negative reviews → go to manager inbox privately for resolution
+- Positive → prompted to share on Google / TripAdvisor / website
+- Negative → goes to manager inbox privately for resolution
 
 **Notifications**
-- Real-time Telegram alerts when a new review arrives
-- Manager can respond directly from the notification
+- Real-time Telegram alert when a new review arrives
+- Manager can respond directly from notification
 
 **Management Dashboard**
-- View all reviews with order/table context
-- Respond to reviews from admin panel
+- All reviews with order/table context
+- Respond from admin panel
 - Filter by rating, date, channel
 
 **Integrations**
-- Google Maps (automatic positive review forwarding)
+- Google Maps — automatic positive review forwarding
 - TripAdvisor
 - Review display on Choice website and mobile app
 
-**Data Export**
-- Export review data to Excel for analysis
-
 ## How It Works
-1. Customer completes order or visit
-2. Automatic email/QR prompts for feedback
-3. Positive → shown "Share on Google" button
-4. Negative → goes to manager privately for resolution
-5. Manager responds; issue resolved before public damage
+1. Guest completes order or visit
+2. Auto prompt for feedback (QR / email)
+3. Positive → "Share on Google" shown
+4. Negative → goes to manager privately
+5. Manager resolves; issue handled before going public
 
 ## Business Impact
 | Metric | Improvement |
 |--------|------------|
 | Review volume increase | ~20% |
-| Negative review reduction | ~60% |
+| Negative reviews caught before going public | ~60% |
 
-## Plans
+## Plan Availability
 Available on **all plans** (Basic, Standard, Smart, Pro).
+
+## Cross-sell
+CRM (reviews linked to customer profile), QR orders (feedback after table visit), reservations (post-visit review request).
